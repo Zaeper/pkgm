@@ -1,0 +1,25 @@
+{
+    "name": "@types/args",
+    "version": "5.0.3",
+    "description": "TypeScript definitions for args",
+    "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/args",
+    "license": "MIT",
+    "contributors": [
+        {
+            "name": "Slessi",
+            "githubUsername": "Slessi",
+            "url": "https://github.com/Slessi"
+        }
+    ],
+    "main": "",
+    "types": "index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+        "directory": "types/args"
+    },
+    "scripts": {},
+    "dependencies": {},
+    "typesPublisherContentHash": "647d78fa99da547f1b8a2c56c50e3b23728fa97159f2ae13dd43ccba725a64f5",
+    "typeScriptVersion": "4.5"
+}

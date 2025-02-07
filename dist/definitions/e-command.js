@@ -1,0 +1,20 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ECommand = void 0;
+var ECommand;
+(function (ECommand) {
+    ECommand["LIST"] = "list";
+    ECommand["LIST_DEPENDENCIES"] = "listDependencies";
+    ECommand["LIST_SCRIPTS"] = "listScripts";
+    ECommand["LINK"] = "link";
+    ECommand["UNLINK"] = "unlink";
+    ECommand["RUN"] = "run";
+    ECommand["RUN_ASYNC"] = "runAsync";
+    ECommand["INSTALL"] = "install";
+    ECommand["BUILD"] = "build";
+    ECommand["BUILD_WATCH"] = "buildWatch";
+    ECommand["REINIT"] = "reinit";
+    ECommand["VERSION_MANAGER"] = "versionManager";
+    ECommand["HELP"] = "help";
+    ECommand["EXIT"] = "exit";
+})(ECommand || (exports.ECommand = ECommand = {}));

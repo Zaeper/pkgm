@@ -1,0 +1,33 @@
+import { INpmPackage } from "../definitions/npm/i-npm-package";
+export declare class LoggerUtil {
+    private static _WHITE;
+    private static _YELLOW;
+    private static _RED;
+    private static _RESET;
+    private static _SEPARATOR;
+    static printBanner(): Promise<void>;
+    static printWelcome(): Promise<void>;
+    static printTitle(title: string): void;
+    static clearBottomLine(offset?: number): void;
+    static printDemandActionMessage(message: string): void;
+    static printPromptTitle(text: string): void;
+    static printProject(npmPackage: INpmPackage): void;
+    static printNote(text: string): void;
+    static printWarning(text: string): void;
+    static printSection(text: string): void;
+    static printInfo(text: string): void;
+    static printHint(text: string): void;
+    static printImportantHint(text: string): void;
+    static printOutputTitle(text: string): void;
+    static printSuccess(text: string): void;
+    static printAction(text: string): void;
+    static printSeparator(): void;
+    static printStep(text: string): void;
+    static printCommand(text: string): void;
+    static printIndented(text: string, level?: number): void;
+    static printSpacingLg(): void;
+    static printSpacing(): void;
+    static printWhite(text: string): void;
+    static printYellow(text: string): void;
+    static printRed(text: string): void;
+}
