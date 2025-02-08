@@ -11,6 +11,10 @@
     "monorepo",
     "multi-package"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zaeper/pkgm.git"
+  },
   "main": "index.js",
   "scripts": {
     "run": "node ./dist/index.js",
