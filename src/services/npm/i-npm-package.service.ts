@@ -3,6 +3,7 @@ import {INpmPackageScopes} from "../../definitions/npm/i-npm-package-scopes";
 import {ECommandType} from "../../definitions/e-command-type";
 import {ENpmPackageType} from "../../definitions/npm/e-npm-package-type";
 import {IConfigFile} from "../../definitions/i-config-file";
+import { IInstallNpmDependencyOptions } from "../../definitions/i-install-npm-dependency-options";
 
 export interface INpmPackageService<T extends INpmPackage> {
     getPackages(
@@ -28,6 +29,6 @@ export interface INpmPackageService<T extends INpmPackage> {
     install(
         npmPackages: T[],
         configFile: IConfigFile,
-        packageName?: string
+        installNpmPackageOptions?: IInstallNpmDependencyOptions
     ): Promise<void>;
 }

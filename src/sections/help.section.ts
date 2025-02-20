@@ -73,7 +73,8 @@ export class HelpSection implements ISection<void> {
             "pkgm run dev": "This example runs the <npm run dev> script asynchronously."
         });
         printCommand(ECommand.INSTALL, ECommandDescriptions.INSTALL, undefined, undefined, {
-            '--package-name': "Installs a specific package. Recommended to use scopes together with this parameter."
+            '--dependency-name': "Installs a specific package. Recommended to use scopes together with this parameter.",
+            '--dependency-category': "Installs a specific package. Recommended to use scopes together with this parameter."
         });
         printCommand(ECommand.VERSION_MANAGER, ECommandDescriptions.VERSION_MANAGER, {
             "sync-versions": "Update all matching dependencies to the defined versions specified in your pkgm.json file.",
