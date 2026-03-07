@@ -8,4 +8,5 @@ module.exports = {
   transformIgnorePatterns: [
     "/node_modules/(?!(@inquirer|yoctocolors|ansi-escapes|cli-width|fast-wrap-ansi|fast-string-width|fast-string-truncated-width|strip-ansi|ansi-regex)/).*/"
   ],
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
 };
