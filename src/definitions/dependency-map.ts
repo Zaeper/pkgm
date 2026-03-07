@@ -43,7 +43,7 @@ export class DependencyMap {
             Object.entries(curr).forEach(([dependencyName, dependencyVersion]: [string, string]) => {
                 const accDependencyVersion: string | undefined = acc[dependencyName];
 
-                if (!!accDependencyVersion) {
+                if (accDependencyVersion) {
                     if (semver.lt(dependencyVersion, accDependencyVersion)) {
                         acc[dependencyName] = dependencyVersion;
                     }
