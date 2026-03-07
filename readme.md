@@ -82,6 +82,8 @@ Alternatively, configure PKGM manually with a `pkgm.json` file in your project d
     "** Optional **",
     "** NPM Projects to be excluded from linking **"
   ],
+  "viteVersion": "** Optional: Version or 'latest' **",
+  "ngCliVersion": "** Optional: Version or 'latest' **",
   "versions": {
     "** optional **": "*",
     "NPM Package Name": "Version"
@@ -144,7 +146,7 @@ You can use all global parameters alongside the commands listed above.
 | `--scope-path`         | Scope the project list by path. The path must match entries in `package.json`.                              |
 | `--scope-package-name` | Scope the project list by package name. Matches entries in `package.json`.                                  |
 | `--exclude-path`       | Exclude a path from the project list. Must exactly match paths in `pkgm.json`. Can be used multiple times.  |
-| `--scope-package-name` | Define specific projects to process. Overrides the project list in `pkgm.json`. Can be used multiple times. |
+| `--package-path`       | Define specific projects to process. Overrides the project list in `pkgm.json`. Can be used multiple times. |
 
 ## Linking Projects
 
