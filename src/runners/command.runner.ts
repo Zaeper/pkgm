@@ -142,7 +142,7 @@ export class CommandRunner implements IRunner<CommandCallback, void, ICommandRun
 
         const command: string | undefined = this._assembleCommand( runnerOptions, prunedNpmPackageScopes );
 
-        if ( !!command ) {
+        if ( command ) {
             LoggerUtil.printCommand( command );
             LoggerUtil.printSpacing();
         }
@@ -187,7 +187,7 @@ export class CommandRunner implements IRunner<CommandCallback, void, ICommandRun
         npmPackageScopes?: INpmPackageScopes
     ) {
         let prunedNpmPackageScopes: INpmPackageScopes | undefined;
-        if ( !!npmPackageScopes ) {
+        if ( npmPackageScopes ) {
             prunedNpmPackageScopes = PackageUtil.pruneUnusedNpmPackageScopes(
                 npmPackageCollection.packages, npmPackageScopes );
         }
@@ -261,7 +261,7 @@ export class CommandRunner implements IRunner<CommandCallback, void, ICommandRun
 
         const command: string[] = [ 'pkgm', runnerCommandOptions.command ];
 
-        for ( let parametersKey in runnerCommandOptions.parameters ) {
+        for ( const parametersKey in runnerCommandOptions.parameters ) {
             command.push( [
                 parametersKey, runnerCommandOptions.parameters[ parametersKey ]
             ].filter( Boolean ).join( "=" ) )
@@ -305,7 +305,7 @@ export class CommandRunner implements IRunner<CommandCallback, void, ICommandRun
         let packagePaths: Set<string> = new Set( npmPackageScopes?.packagePaths );
 
         LoggerUtil.printPromptTitle( "Edit scopes?" )
-        let choices = [
+        const choices = [
             {
                 name: 'Continue',
                 value: 'continue',
@@ -345,7 +345,7 @@ export class CommandRunner implements IRunner<CommandCallback, void, ICommandRun
         } );
 
         switch ( answer ) {
-            case("addPathScope"):
+            case("addPathScope"): {
                 const suggestedPathScope: string | null = this._generateScopeSuggestion(
                     npmPackageCollection.packagePaths );
 
@@ -356,7 +356,8 @@ export class CommandRunner implements IRunner<CommandCallback, void, ICommandRun
 
                 pathScopes = new Set( [ pathScopeInput ] );
                 break;
-            case("addPackageNameScope"):
+            }
+            case("addPackageNameScope"): {
                 const packageJsonNames: string [] = npmPackageCollection.packages.map(
                     ( npmPackage ) => npmPackage.packageJson.name );
                 const suggestedPackageNameScope: string | null = this._generateScopeSuggestion( packageJsonNames );
@@ -367,16 +368,19 @@ export class CommandRunner implements IRunner<CommandCallback, void, ICommandRun
                 } );
                 packageNameScopes = new Set( [ packageNameScopeInput ] );
                 break;
-            case("excludeManually"):
+            }
+            case("excludeManually"): {
                 const excludeManuallyExcludedPackagePaths: string[] = await this._promptExcludePackagesManually(
                     npmPackageCollection, npmPackageScopes );
                 excludedPackagePaths = new Set( excludeManuallyExcludedPackagePaths )
                 break;
-            case("selectManually"):
+            }
+            case("selectManually"): {
                 const selectedPackagePaths: string[] = await this._promptSelectPackagesManually(
                     npmPackageCollection, npmPackageScopes );
                 packagePaths = new Set( selectedPackagePaths )
                 break;
+            }
             case("removeAllScopes"):
                 return {};
             case("continue"):

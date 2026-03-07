@@ -3,6 +3,7 @@ import chalk from "chalk";
 import readline from "readline";
 import {INpmPackage} from "../definitions/npm/i-npm-package";
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 require('pkginfo')(module, "version");
 
 /**
@@ -18,7 +19,7 @@ export class LoggerUtil {
     public static printBanner(): Promise<void> {
         return new Promise((
             resolve,
-            reject
+            _reject
         ) => {
             figlet.text("Zaeper", {
                 font: "Ogre",
