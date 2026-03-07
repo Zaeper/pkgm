@@ -16,18 +16,30 @@ import { ENpmPackageType } from "../definitions/npm/e-npm-package-type";
 import { PackageUtil } from "../utils/packageUtil";
 import { EIncludeMode } from "./e-include-mode";
 
+/**
+ * Callback function type for command execution
+ */
 export type CommandCallback = (
     npmPackageCollection: NpmPackageCollection,
     unscopedNpmPackageCollection: NpmPackageCollection,
     configFile: IConfigFile
 ) => void | Promise<void>;
 
+/**
+ * Options for configuring command runner behavior
+ */
 export interface ICommandRunnerOptions {
+    /** The command name for display purposes */
     command?: string,
+    /** Whether to only process symlinked projects */
     symlinkedProjectsOnly?: boolean,
+    /** Additional command parameters */
     parameters?: Record<string, string | undefined>
 }
 
+/**
+ * Runner class for executing commands across npm packages with scope management
+ */
 export class CommandRunner implements IRunner<CommandCallback, void, ICommandRunnerOptions> {
     constructor( private _npmProjectService: INpmProjectService, private _npmWorkspaceService: INpmWorkspaceService ) {
     }
@@ -461,12 +473,9 @@ export class CommandRunner implements IRunner<CommandCallback, void, ICommandRun
     private _generateScopeSuggestion( inputs: string[] ): string | null {
         if ( inputs.length === 0 ) return null;
 
-        // Create a map to count occurrences of each prefix
         const prefixCountMap: { [ key: string ]: number } = {};
 
-        // Loop through the array and count the occurrences of each prefix
         for ( const str of inputs ) {
-            // For each string, generate all possible prefixes
             for ( let i = 1; i <= str.length; i++ ) {
                 const prefix = str.slice( 0, i );
                 if ( prefixCountMap[ prefix ] ) {
@@ -477,7 +486,6 @@ export class CommandRunner implements IRunner<CommandCallback, void, ICommandRun
             }
         }
 
-        // Find the prefix with the maximum count
         let mostFrequentPrefix: string | null = null;
         let maxCount = 0;
 

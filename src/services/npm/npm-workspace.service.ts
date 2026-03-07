@@ -11,7 +11,6 @@ import {NpmPackageService} from "./npm-package.service";
 import {IExecutionService} from "../i-execution.service";
 import {ENpmPackageType} from "../../definitions/npm/e-npm-package-type";
 import { INpmPackageScopes } from "../../definitions/npm/i-npm-package-scopes";
-import { INpmProject } from "../../definitions/npm/i-npm-project";
 import { INpmPackage } from "../../definitions/npm/i-npm-package";
 
 export class NpmWorkspaceService extends NpmPackageService<INpmWorkspace> implements INpmWorkspaceService {

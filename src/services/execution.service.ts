@@ -10,12 +10,18 @@ import {ECommandType} from "../definitions/e-command-type";
 import {INpmPackage} from "../definitions/npm/i-npm-package";
 import {NpmClientType} from "../definitions/npm/npm-client-type";
 
+/**
+ * Internal interface for managing deferred promises
+ */
 interface IDeferred {
     promise: Promise<void>,
     resolve: ((value: void | PromiseLike<void>) => void) | undefined,
     reject: ((reason?: any) => void) | undefined
 }
 
+/**
+ * Service for executing npm scripts and terminal commands across packages
+ */
 export class ExecutionService implements IExecutionService {
     private static readonly _LOGGER: Logger = new Logger();
 
@@ -34,20 +40,24 @@ export class ExecutionService implements IExecutionService {
         this._cleanExecutionData();
 
         for (const npmPackage of targets) {
+            const projectName = npmPackage.packageJson.name;
+            
             LoggerUtil.printProject(npmPackage);
 
             let assembledCommand: string;
             if (commandType === ECommandType.NPM || commandType === ECommandType.NPM_SCRIPT) {
                 assembledCommand = this._assembleNPMScript(npmClient, command, commandType);
-            }
-            if (commandType === ECommandType.TERMINAL) {
+            } else if (commandType === ECommandType.TERMINAL) {
                 assembledCommand = this._assembleTerminalScript(command);
+            } else {
+                LoggerUtil.printWarning(`Unknown command type: ${commandType}. Skipping execution.`);
+                continue;
             }
 
 
             const index: number = targets.indexOf(npmPackage);
 
-            LoggerUtil.printStep(`${showProgress ? chalk.bgMagenta.bold.black(` Npm package ${index + 1}/${targets.length} `) + " " : ''}Executing \"${assembledCommand!}\" in ${npmPackage.packageJson.name}`)
+            LoggerUtil.printStep(`${showProgress ? chalk.bgMagenta.bold.black(` Npm package ${index + 1}/${targets.length} `) + " " : ''}Executing "${assembledCommand}" in ${npmPackage.packageJson.name}`)
 
             if (commandType === ECommandType.NPM_SCRIPT) {
                 const scriptName: string | undefined = Object.keys(npmPackage.packageJson.scripts ?? {}).find((scriptName: string) => {
@@ -56,14 +66,14 @@ export class ExecutionService implements IExecutionService {
                 const projectHasNpmCommand: boolean = !!scriptName;
 
                 if (!projectHasNpmCommand) {
-                    LoggerUtil.printWarning(`Skippping execution. No script npm run ${scriptName} command found in ${npmPackage.packageJson.name}`);
+                    LoggerUtil.printWarning(`Skipping execution. No script "npm run ${command}" found in ${npmPackage.packageJson.name}`);
                     continue;
                 }
             }
 
             try {
                 if (!async) {
-                    await this._executeTerminalCommand(commandType, assembledCommand!, npmPackage.path);
+                    await this._executeTerminalCommand(commandType, assembledCommand, npmPackage.path, projectName);
                 } else {
                     const asyncProcess = (): ChildProcess => {
                         const colors: chalk.Chalk[] = [chalk.cyan, chalk.blue, chalk.magenta, chalk.red, chalk.green, chalk.gray, chalk.blueBright, chalk.magentaBright, chalk.redBright, chalk.cyanBright, chalk.greenBright];
@@ -109,7 +119,7 @@ export class ExecutionService implements IExecutionService {
 
             for (let i = 0; i < this._processQueue.length; i++) {
                 this._processIndex = i;
-                let processQueueElement = this._processQueue[i];
+                const processQueueElement = this._processQueue[i];
 
                 if (this._processQueue.length > i + 1) {
                     this._keyPromptMessage = `${chalk.bgGreen.black(`  Press ${chalk.bold.black("<ENTER>")} to start the next process `)}${chalk.bgWhite.black.bold(` ${this._projectList[this._processIndex]}  `)}`;
@@ -134,23 +144,14 @@ export class ExecutionService implements IExecutionService {
         }
     }
 
-    private _executeTerminalCommand(commandType: ECommandType, command: string, cwd: string): Promise<void> {
+    private _executeTerminalCommand(commandType: ECommandType, command: string, cwd: string, _projectName?: string): Promise<void> {
         return new Promise((resolve, reject) => {
             const [executable, ...args] = command.split(' ');
 
             const child = child_process.spawn(executable, args, {
-                cwd, stdio: "inherit", shell: true
-            });
-
-            let stdout = '';
-            let stderr = '';
-
-            child.stdout?.on('data', (data) => {
-                stdout += data.toString();
-            });
-
-            child.stderr?.on('data', (data) => {
-                stderr += data.toString();
+                cwd, 
+                stdio: 'inherit', 
+                shell: true
             });
 
             child.on('error', (error) => {
@@ -162,24 +163,18 @@ export class ExecutionService implements IExecutionService {
                 if (commandType === ECommandType.TERMINAL) {
                     if (code !== 0) {
                         const error = new Error(`Command failed with exit code ${code}`);
-                        console.error(stderr || error.message);
+                        console.error(error.message);
                         reject(error);
                         return;
                     }
                 }
-
-                if (stderr) {
-                    console.error(stderr);
-                }
-
-                process.stdout.write(stdout);
                 resolve();
             });
         });
     }
 
     private _print(emitter: string, text: string) {
-        if (!!this._keyPromptMessage) {
+        if (this._keyPromptMessage) {
             LoggerUtil.clearBottomLine()
         }
 
@@ -193,7 +188,7 @@ export class ExecutionService implements IExecutionService {
         console.log(text);
         this._printedLines += text.toString().split('\n').length;
 
-        if (!!this._keyPromptMessage) {
+        if (this._keyPromptMessage) {
             LoggerUtil.printDemandActionMessage(this._keyPromptMessage)
         }
     }

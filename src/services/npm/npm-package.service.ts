@@ -50,14 +50,14 @@ export class NpmPackageService<T extends INpmPackage> implements INpmPackageServ
             if ( doesPackageLockJsonExist ) {
                 try {
                     packageLockJson = JsonUtil.readJson<IPackageLockJson>( packageJsonLockPath );
-                } catch ( e ) {
+                } catch {
                     /**
                      * silently fail
                      */
                 }
             }
 
-            let doesNodeModulesDirectoryExists: boolean = fs.existsSync( nodeModulesPath );
+            const doesNodeModulesDirectoryExists: boolean = fs.existsSync( nodeModulesPath );
 
             try {
                 const packageJson: IPackageJson = JsonUtil.readJson<IPackageJson>( packageJsonPath );
@@ -71,7 +71,7 @@ export class NpmPackageService<T extends INpmPackage> implements INpmPackageServ
                     packageLockJsonPath: doesPackageLockJsonExist ? packageJsonLockPath : undefined,
                     nodeModulesPath: doesNodeModulesDirectoryExists ? nodeModulesPath : undefined
                 };
-            } catch ( e ) {
+            } catch {
                 NpmPackageService._LOGGER.warning( `Tried to parse ${ packageJsonPath } but failed. Skipping this file` );
             }
         } ).filter( (npmPackage) => !!npmPackage );

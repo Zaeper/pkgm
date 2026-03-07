@@ -5,6 +5,9 @@ import {INpmPackage} from "../definitions/npm/i-npm-package";
 
 require('pkginfo')(module, "version");
 
+/**
+ * Utility class for formatted console output and logging
+ */
 export class LoggerUtil {
     private static _WHITE: string = '\x1b[37m';
     private static _YELLOW: string = '\x1b[33m'

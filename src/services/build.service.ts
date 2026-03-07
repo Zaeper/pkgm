@@ -13,6 +13,9 @@ import {IFileService} from "./i-file.service";
 import {IConfigFile} from "../definitions/i-config-file";
 import {ENpmPackageType} from "../definitions/npm/e-npm-package-type";
 
+/**
+ * Service for building and cleaning npm packages in a monorepo
+ */
 export class BuildService implements IBuildService {
     private static readonly _NODE_MODULES_DIR_NAME: string = "node_modules";
     private static readonly _DIST_DIR_NAME: string = "dist";
@@ -34,7 +37,9 @@ export class BuildService implements IBuildService {
         const npmPackageProcessList: INpmPackage[] = this._npmDependencyService.getSortedNpmPackagesByInternalDependencies(npmPackageCollection, unscopedNpmPackageCollection);
 
         for (const npmPackage of npmPackageProcessList) {
-            LoggerUtil.printHint(npmPackage.packageJson.name);
+            const projectName = npmPackage.packageJson.name;
+            
+            LoggerUtil.printHint(projectName);
             await this._linkerService.applyLinks(npmPackage, unscopedNpmPackageCollection, configFile);
 
             await this._executionService.executeScript([npmPackage], "install", ECommandType.NPM, configFile.npmClient);
@@ -56,35 +61,36 @@ export class BuildService implements IBuildService {
         await this._linkerService.unlink(npmPackageCollection, unscopedNpmPackageCollection);
         await this._fileService.removeSymlinks(npmPackageCollection.packages);
 
-
         for (const [index, npmPackage] of packageProcessList.entries()) {
-            LoggerUtil.printSection(`Process ${index + 1}/${packageProcessList.length}: Processing ${npmPackage.type.toLowerCase()}: ${npmPackage.packageJson.name}`);
+            const projectName = npmPackage.packageJson.name;
+            
+            LoggerUtil.printSection(`Process ${index + 1}/${packageProcessList.length}: Processing ${npmPackage.type.toLowerCase()}: ${projectName}`);
 
             const nodeModulesDirPath: string = PathUtil.join(npmPackage.path, BuildService._NODE_MODULES_DIR_NAME);
 
             if (fs.existsSync(nodeModulesDirPath)) {
-                LoggerUtil.printStep(`Deleting ${BuildService._NODE_MODULES_DIR_NAME} directory in ${npmPackage.packageJson.name}`);
+                LoggerUtil.printStep(`Deleting ${BuildService._NODE_MODULES_DIR_NAME} directory in ${projectName}`);
                 rimrafSync(nodeModulesDirPath, {preserveRoot: false});
             } else {
-                LoggerUtil.printInfo(`${BuildService._NODE_MODULES_DIR_NAME} directory not found. Skipping deleting ${BuildService._NODE_MODULES_DIR_NAME} directory in ${npmPackage.packageJson.name}`);
+                LoggerUtil.printInfo(`${BuildService._NODE_MODULES_DIR_NAME} directory not found. Skipping deleting ${BuildService._NODE_MODULES_DIR_NAME} directory in ${projectName}`);
             }
 
             if (includePackageLock && npmPackage.packageLockJsonPath) {
                 if (fs.existsSync(npmPackage.packageLockJsonPath)) {
-                    LoggerUtil.printStep(`Deleting ${BuildService._PACKAGE_LOCK_FILE_NAME} file in ${npmPackage.packageJson.name}`);
+                    LoggerUtil.printStep(`Deleting ${BuildService._PACKAGE_LOCK_FILE_NAME} file in ${projectName}`);
                     rimrafSync(npmPackage.packageLockJsonPath);
                 } else {
-                    LoggerUtil.printInfo(`${BuildService._PACKAGE_LOCK_FILE_NAME} file not found. Skipping deleting ${BuildService._PACKAGE_LOCK_FILE_NAME} in ${npmPackage.packageJson.name}`);
+                    LoggerUtil.printInfo(`${BuildService._PACKAGE_LOCK_FILE_NAME} file not found. Skipping deleting ${BuildService._PACKAGE_LOCK_FILE_NAME} in ${projectName}`);
                 }
             }
 
             const distDirPath: string = PathUtil.join(npmPackage.path, BuildService._DIST_DIR_NAME);
 
             if (fs.existsSync(distDirPath)) {
-                LoggerUtil.printStep(`Deleting ${BuildService._DIST_DIR_NAME} directory in ${npmPackage.packageJson.name}`);
+                LoggerUtil.printStep(`Deleting ${BuildService._DIST_DIR_NAME} directory in ${projectName}`);
                 rimrafSync(distDirPath, {preserveRoot: false});
             } else {
-                LoggerUtil.printInfo(`${BuildService._DIST_DIR_NAME} directory not found. Skipping deleting ${BuildService._DIST_DIR_NAME} directory in ${npmPackage.packageJson.name}`);
+                LoggerUtil.printInfo(`${BuildService._DIST_DIR_NAME} directory not found. Skipping deleting ${BuildService._DIST_DIR_NAME} directory in ${projectName}`);
             }
         }
     }

@@ -10,7 +10,7 @@ export enum ECommandDescriptions {
     INSTALL = 'Run npm install over your projects.',
     BUILD = 'Run npm run build over your projects',
     BUILD_WATCH = 'Run npm run build:watch over your projects',
-    REINIT = 'Reinit\'s your projects. This includes deleting the according node_module\s, .dist directory and refreshing of the existing symlinks',
+    REINIT = 'Reinit\'s your projects. This includes deleting the according node_modules, .dist directory and refreshing of the existing symlinks',
     HELP = "Help",
     EXIT = "Exit"
 }

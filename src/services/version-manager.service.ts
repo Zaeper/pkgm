@@ -63,7 +63,7 @@ export class VersionManagerService implements IVersionManagerService {
 
         const npmPackageProcessingList: INpmPackage[] = this._npmDependencyService.getSortedNpmPackagesByInternalDependencies(npmPackageCollection, unscopedNpmPackageCollection);
 
-        for (let npmPackage of npmPackageProcessingList) {
+        for (const npmPackage of npmPackageProcessingList) {
             LoggerUtil.printProject(npmPackage);
             const dependencyRecommendations = dependencyRecommendationsMap[npmPackage.packageJson.name];
             const recommendedDependencies: Record<string, IRecommendedDependency> = dependencyRecommendations.dependencies;
@@ -119,14 +119,14 @@ export class VersionManagerService implements IVersionManagerService {
             PackageUtil.writePackageJson(npmPackage, updatedPackageJson, VersionManagerService._PACKAGE_JSON_FILE_NAME);
 
             if (cleanProjects) {
-                if (!!npmPackage.nodeModulesPath) {
+                if (npmPackage.nodeModulesPath) {
                     LoggerUtil.printStep(`Deleting node_modules`);
                     if (!rimrafSync(npmPackage.nodeModulesPath, {preserveRoot: false})) {
                         VersionManagerService._LOGGER.error(`Can't delete node_modules. Please make sure the permissions are set correctly. Tried to delete ${npmPackage.nodeModulesPath}`);
                     }
                 }
 
-                if (!!npmPackage.packageLockJsonPath) {
+                if (npmPackage.packageLockJsonPath) {
                     LoggerUtil.printStep(`Deleting package-lock.json`);
                     if (!rimrafSync(npmPackage.packageLockJsonPath)) {
                         VersionManagerService._LOGGER.error(`Can't delete package-lock.json. Please make sure the permissions are set correctly. Tried to delete ${npmPackage.packageLockJsonPath}`);
@@ -180,11 +180,11 @@ export class VersionManagerService implements IVersionManagerService {
     }
 
     public async getPackageVersionRecommendations(npmPackageCollection: NpmPackageCollection, unscopedNpmPackageCollection: NpmPackageCollection): Promise<Record<string, IDependencyRecommendations>> {
-        let npmPackageDependencyCheckResultMap: Record<string, INpmPackageDependencyCheckResult> = {};
+        const npmPackageDependencyCheckResultMap: Record<string, INpmPackageDependencyCheckResult> = {};
 
         const npmPackageProcessingList: INpmPackage[] = this._npmDependencyService.getSortedNpmPackagesByInternalDependencies(npmPackageCollection, unscopedNpmPackageCollection);
 
-        for (let npmPackage of npmPackageProcessingList) {
+        for (const npmPackage of npmPackageProcessingList) {
             LoggerUtil.printProject(npmPackage);
 
             const dependencyMap: DependencyMap = this._getInstalledPackages(npmPackage, unscopedNpmPackageCollection);
@@ -241,10 +241,11 @@ export class VersionManagerService implements IVersionManagerService {
             const outdatedReport: Record<string, INpmPackageOutdatedState> = npmPackageDependencies.reduce((acc: Record<string, INpmPackageOutdatedState>, npmPackageDependency: NpmPackageDependency): Record<string, INpmPackageOutdatedState> => {
                 const currentInstalledVersion: string | undefined = this._getInstalledVersion(npmPackageDependency.name, npmPackage);
                 const versionEntry: INpmPackageDependencyVersionEntry | undefined = npmPackageDependency.versionEntries.find((versionEntry: INpmPackageDependencyVersionEntry) => versionEntry.version === currentInstalledVersion);
+                const recommendedVersion: string | undefined = recommendedNpmPackageDependencyLookupMap[npmPackageDependency.name]?.version;
 
                 acc[npmPackageDependency.name] = {
                     currentVersion: currentInstalledVersion,
-                    isOutdated: !!currentInstalledVersion && semver.lt(currentInstalledVersion, recommendedNpmPackageDependencyLookupMap[npmPackageDependency.name].version),
+                    isOutdated: !!currentInstalledVersion && !!recommendedVersion && semver.lt(currentInstalledVersion, recommendedVersion),
                     latestVersion: npmPackageDependency.versions[0],
                     deprecated: versionEntry?.deprecated
                 }
@@ -280,7 +281,7 @@ export class VersionManagerService implements IVersionManagerService {
             head: tableHeaders
         });
 
-        for (let [recommendedDependencyName, recommendedDependencyVersion] of Object.entries(recommendedDependencyVersions)) {
+        for (const [recommendedDependencyName, recommendedDependencyVersion] of Object.entries(recommendedDependencyVersions)) {
             if (!dependencies[recommendedDependencyName] && !recommendedDependencyVersion.isNewToAdd) continue;
 
             const recommendedDependency: IRecommendedDependency = recommendedDependencyVersion;
@@ -321,7 +322,7 @@ export class VersionManagerService implements IVersionManagerService {
                     outputText.push(chalk.green("FALSE"));
                 }
 
-                if (!!outdatedDependency.deprecated) {
+                if (outdatedDependency.deprecated) {
                     outputText.push(chalk.bgYellow.black("  DEPRECATED  "));
                 }
 
@@ -364,7 +365,7 @@ export class VersionManagerService implements IVersionManagerService {
             }
 
             const vulnerabilityReport: IAuditVulnerability | undefined = auditReport.vulnerabilities?.[recommendedDependencyName];
-            const vulnerabilitySeverity: EAuditVulnerabilitySeverity = !!vulnerabilityReport ? vulnerabilityReport.severity : EAuditVulnerabilitySeverity.NONE;
+            const vulnerabilitySeverity: EAuditVulnerabilitySeverity = vulnerabilityReport ? vulnerabilityReport.severity : EAuditVulnerabilitySeverity.NONE;
 
             let vulnerabilitySeverityText: string;
             switch (vulnerabilitySeverity) {
@@ -375,7 +376,7 @@ export class VersionManagerService implements IVersionManagerService {
                     vulnerabilitySeverityText = chalk.bgYellow.white.bold("  MEDIUM  ");
                     break;
                 case EAuditVulnerabilitySeverity.LOW:
-                    vulnerabilitySeverityText = chalk.bgCyan.white.bold("  MEDIUM  ");
+                    vulnerabilitySeverityText = chalk.bgCyan.white.bold("  LOW  ");
                     break;
                 default:
                     vulnerabilitySeverityText = chalk.green("  NONE FOUND  ");
@@ -385,7 +386,7 @@ export class VersionManagerService implements IVersionManagerService {
 
             const versionNotes: string[] = [];
 
-            if (!!outdatedDependency.deprecated) {
+            if (outdatedDependency.deprecated) {
                 versionNotes.push(`${chalk.bgMagenta("  Deprecation warning  ")} ${chalk.magenta(outdatedDependency.deprecated.replaceAll(". ", ".\n"))}`);
             }
 
@@ -394,9 +395,9 @@ export class VersionManagerService implements IVersionManagerService {
                 versionNotes.push(`${chalk.bgMagenta("  New package  ")} ${chalk.magenta(`This package will be added to your package.json as it is a required peerDependency of ${peerDependencyFrom}.`)}`);
             }
 
-            if (!!recommendedDependencyVersion.modifiedThrough) {
+            if (recommendedDependencyVersion.modifiedThrough) {
                 const modifiedThroughSource: string | undefined = recommendedDependencyVersion.modifiedThrough;
-                if (!!modifiedThroughSource && installedVersion && !semver.satisfies(installedVersion, recommendedDependencyVersion.version)) {
+                if (modifiedThroughSource && installedVersion && !semver.satisfies(installedVersion, recommendedDependencyVersion.version)) {
                     const modifiedThroughPackage: string = [modifiedThroughSource, unscopedRecommendedDependencyVersions[modifiedThroughSource].version].join("@");
                     versionNotes.push(`${chalk.bgMagenta("  Latest version not recommended  ")} ${chalk.magenta(`A lower version of this package is recommended to align with the peerDependencies definitions of ${modifiedThroughPackage}.`)}`);
                 }
@@ -515,10 +516,10 @@ export class VersionManagerService implements IVersionManagerService {
 
         for (const npmPackageDependency of parentNpmPackageDependencies) {
             const npmPackageDependencyVersionEntries: INpmPackageDependencyVersionEntry[] = npmPackageDependency.versionEntries;
-            const versionPointer = versionPointerMap[npmPackageDependency.name] ?? [0];
+            const versionPointer = versionPointerMap[npmPackageDependency.name] ?? 0;
             const lastNpmPackageDependencyVersionEntry: INpmPackageDependencyVersionEntry = npmPackageDependencyVersionEntries[versionPointer];
 
-            if (!!dependencyMap.peerDependencies[npmPackageDependency.name]) {
+            if (dependencyMap.peerDependencies[npmPackageDependency.name]) {
                 continue;
             }
 
@@ -548,7 +549,7 @@ export class VersionManagerService implements IVersionManagerService {
 
         const dependencyNames: string[] = Object.keys(dependencyMap.summarizedDependencies);
 
-        for (let dependencyName of dependencyNames) {
+        for (const dependencyName of dependencyNames) {
             getNpmPackageDependenciesQueue.push(this._getNpmPackageDependency(dependencyName, npmPackage));
         }
 
@@ -578,7 +579,7 @@ export class VersionManagerService implements IVersionManagerService {
                 const sourceNpmPackageDependencyVersionPointer: number = npmPackageDependencyVersionPointerMap[sourceNpmPackageDependencyName] ?? 0;
                 const sourceNpmPackageDependencyVersion: string = sourceNpmPackageDependency.versions[sourceNpmPackageDependencyVersionPointer];
 
-                let preferredVersions: (string | null)[] = [];
+                const preferredVersions: (string | null)[] = [];
 
                 for (let j = 0; j < npmPackageDependencies.length; j++) {
                     if (i === j) continue;
@@ -615,7 +616,7 @@ export class VersionManagerService implements IVersionManagerService {
                     npmPackageDependencyVersionPointerMap[sourceNpmPackageDependencyName] = sourceNpmPackageDependencyPreferredVersionIndex;
                     const sourceNpmPackageDependencyPreferredVersion: string = sourceNpmPackageDependency.versions[sourceNpmPackageDependencyPreferredVersionIndex];
 
-                    for (let dependingTargetNpmPackageDependencyIndex of dependingTargetNpmPackageDependencyIndices) {
+                    for (const dependingTargetNpmPackageDependencyIndex of dependingTargetNpmPackageDependencyIndices) {
                         const targetNpmPackageDependency: NpmPackageDependency = npmPackageDependencies[dependingTargetNpmPackageDependencyIndex];
                         const targetNpmPackageDependencyName: string = targetNpmPackageDependency.name;
                         const targetNpmPackageDependencyPeerDependencyEntries: Record<string, INpmPackagePeerDependency>[] = targetNpmPackageDependency.versionEntries.map((versionEntry: INpmPackageDependencyVersionEntry) => versionEntry.peerDependencies);
@@ -650,7 +651,7 @@ export class VersionManagerService implements IVersionManagerService {
     private async _getNpmPackageDependency(dependencyName: string, npmPackage: INpmPackage, dependsOn?: string): Promise<NpmPackageDependency> {
         const npmPackageDependencyVersions: INpmPackageDependencyVersionEntry[] = await this._getNpmPackageDependencyVersions(dependencyName, npmPackage)
 
-        let isTypeDeclarationPackage: boolean = dependencyName.split("/")[0] === "@types";
+        const isTypeDeclarationPackage: boolean = dependencyName.split("/")[0] === "@types";
         const addedBy: string = dependsOn ?? VersionManagerService._PACKAGE_JSON_FILE_NAME;
 
         return new NpmPackageDependency(dependencyName, npmPackageDependencyVersions, isTypeDeclarationPackage, addedBy);
@@ -688,7 +689,7 @@ export class VersionManagerService implements IVersionManagerService {
     }
 
     private async _getNpmPackageInfo(dependencyName: string, npmPackage: INpmPackage): Promise<INpmInfo[]> {
-        let cachedNpmPackageInfo: INpmInfo[] | undefined = this._remoteNpmPackageInfoCache[dependencyName];
+        const cachedNpmPackageInfo: INpmInfo[] | undefined = this._remoteNpmPackageInfoCache[dependencyName];
         if (cachedNpmPackageInfo === undefined) {
             this._remoteNpmPackageInfoCache[dependencyName] = await this._fetchNpmPackageInfo(dependencyName, npmPackage);
         }
@@ -700,24 +701,16 @@ export class VersionManagerService implements IVersionManagerService {
         const command: string = `npm info ${npmPackageName}@">=0" name version deprecated peerDependencies peerDependenciesMeta bin --json`
 
         function checkBrackets(input: string): boolean {
-            // Trim whitespace from the input to avoid false negatives
             const trimmedInput = input.trim();
-
-            // Check if the string starts with "{" and ends with "}"
             const startsWithCurly = trimmedInput.startsWith("[");
             const endsWithCurly = trimmedInput.endsWith("]");
-
             return startsWithCurly && endsWithCurly;
         }
 
         function checkCurlyBraces(input: string): boolean {
-            // Trim whitespace from the input to avoid false negatives
             const trimmedInput = input.trim();
-
-            // Check if the string starts with "{" and ends with "}"
             const startsWithCurly = trimmedInput.startsWith("{");
             const endsWithCurly = trimmedInput.endsWith("}");
-
             return startsWithCurly && endsWithCurly;
         }
 

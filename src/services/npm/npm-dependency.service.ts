@@ -74,13 +74,17 @@ export class NpmDependencyService implements INpmDependencyService {
         let prevIterationPendingListSize: number = 0;
         let index = 0;
 
-        while (projectPendingList.size > 0 || addedList.length === 0) {
-            if (index > 0 && prevIterationPendingListSize === projectPendingList.size) {
+        if (projectPendingList.size === 0 && workspacePendingList.size === 0) {
+            return addedList;
+        }
+
+        while (projectPendingList.size > 0 || workspacePendingList.size > 0) {
+            if (index > 0 && prevIterationPendingListSize === projectPendingList.size + workspacePendingList.size) {
                 NpmDependencyService._LOGGER.error("Got stuck in an endless loop while resolving dependencies. This may occur due to circular dependencies.")
                 break;
             }
 
-            prevIterationPendingListSize = projectPendingList.size;
+            prevIterationPendingListSize = projectPendingList.size + workspacePendingList.size;
 
             workspacePendingList.forEach((workspace: INpmWorkspace) => {
                 addDependencyFreeWorkspace(workspace);
@@ -124,8 +128,8 @@ export class NpmDependencyService implements INpmDependencyService {
             const packagesLookupMap: Record<string, INpmPackage> = unscopedNpmPackageCollection.packagesLookupMap;
 
             Object.entries(packageDependencies).forEach(([packageName, packageVersion]) => {
-                const npmPackage: INpmPackage = packagesLookupMap[packageName];
-                const hasValidVersionNumber: string | null = semver.valid(packageVersion)
+                const npmPackage: INpmPackage | undefined = packagesLookupMap[packageName];
+                const hasValidVersionNumber: boolean = semver.valid(packageVersion) !== null;
 
                 const tags: string[] = [];
                 const outputTextChunks: string[] = [chalk.white(`${packageName}`)];
@@ -134,14 +138,14 @@ export class NpmDependencyService implements INpmDependencyService {
                     tags.push(chalk.magenta("PeerDependency"))
                 }
 
-                if (hasValidVersionNumber !== null) {
+                if (hasValidVersionNumber) {
                     outputTextChunks.push(`${chalk.white("@")}${chalk.green(`${packageVersion}`)}`);
                 } else {
                     tags.push(chalk.yellow(`Linked`));
 
                 }
 
-                if (npmPackage.packageJson.private) {
+                if (npmPackage?.packageJson.private) {
                     tags.push(chalk.red(`Private`));
                 }
                 if (tags.length > 0) {
