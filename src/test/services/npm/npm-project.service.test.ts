@@ -2,7 +2,6 @@ import {mock, MockProxy} from "jest-mock-extended";
 import {describe, expect, it, jest, test, beforeEach} from "@jest/globals";
 import {INpmProjectService} from "../../../services/npm/i-npm-project.service";
 import {NpmProjectService} from "../../../services/npm/npm-project.service";
-import {ExecutionService} from "../../../services/execution.service";
 import {INpmPackageScopes} from "../../../definitions/npm/i-npm-package-scopes";
 import {INpmPackage} from "../../../definitions/npm/i-npm-package";
 import {JsonUtil} from "../../../utils/json.util";
@@ -17,8 +16,8 @@ describe('packageScopes', () => {
     let npmProjectService: INpmProjectService;
 
     beforeEach(() => {
+        mockedExecutionService = mock<IExecutionService>();
         npmProjectService = new NpmProjectService(mockedExecutionService);
-        mockedExecutionService = mock<ExecutionService>();
     })
 
     const getMockedPackageJson = (name?: string): IPackageJson => ({
