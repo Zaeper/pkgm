@@ -1,5 +1,6 @@
 import Path from "path";
 
+// Normalizes paths to always use forward slashes (for cross-platform consistency)
 export class PathUtil {
     public static join(...paths: string[]): string {
         return PathUtil.normalize(Path.join(...paths));
