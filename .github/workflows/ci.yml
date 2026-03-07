@@ -59,6 +59,9 @@ jobs:
     needs: [test, lint]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -76,6 +79,6 @@ jobs:
         run: npm run build
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
