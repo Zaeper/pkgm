@@ -8,6 +8,9 @@ import {ListUtil} from "./list.util";
 import {glob} from "glob";
 import path from "path";
 
+/**
+ * Utility class for npm package discovery, filtering, and manipulation
+ */
 export class PackageUtil {
     private static readonly _LOGGER: Logger = new Logger();
     private static readonly _PACKAGE_NAME_SELF: string = "@zaeper/pkgm";
@@ -73,7 +76,7 @@ export class PackageUtil {
 
         try {
             fs.writeFileSync(packageJsonFilePath, data);
-        } catch (e) {
+        } catch {
             PackageUtil._LOGGER.warning(`Could not overwrite package.json for ${npmPackage.packageJson.name}`);
         }
     }

@@ -10,7 +10,6 @@ export class VersionUtil {
      * @returns {string} - The derived version operator (e.g., "^", "~", or an empty string if no operator fits).
      */
     public static getVersionOperator(version: string, range: string): "^" | "~" | null {
-        // Validate inputs
         if (!semver.valid(version)) {
             throw new Error(`Invalid version: ${version}`);
         }
@@ -39,10 +38,11 @@ export class VersionUtil {
                 return "^"
             }
             if(["<"].includes(definedOperator)) {
-                if(parsedVersion.major > parsedVersion.major) {
+                const maxVersion = semver.coerce(range.slice(1));
+                if(maxVersion && maxVersion.major > parsedVersion.major) {
                     return "^";
                 }
-                if(parsedVersion.minor > parsedVersion.minor) {
+                if(maxVersion && maxVersion.minor > parsedVersion.minor) {
                     return "~";
                 }
             }

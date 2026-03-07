@@ -48,7 +48,7 @@ export class NpmClientService implements INpmClientService {
     }
 
     _executeTerminalCommand(command: string): Promise<string> {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, _reject) => {
             child_process.exec(command, {
                 encoding: "utf-8"
             }, (error, stdout, stderr) => {

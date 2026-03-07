@@ -16,6 +16,9 @@ import {PathUtil} from "../utils/path.util";
 import {INpmPackage} from "../definitions/npm/i-npm-package";
 import child_process from "child_process";
 
+/**
+ * Service for managing pkgm configuration files and symlinks
+ */
 export class FileService implements IFileService {
     private static readonly _LOGGER: Logger = new Logger();
     private static readonly _CONFIG_FILE_NAME: string = "pkgm.json";
@@ -36,7 +39,7 @@ export class FileService implements IFileService {
     public checkIfConfigFileExists(): boolean {
         try {
             return fs.existsSync(this._configFilePath);
-        } catch (e) {
+        } catch {
             FileService._LOGGER.error(`Can't read from file-system. Please make sure the permissions are set correctly.`)
             process.exit(1);
         }
@@ -48,7 +51,7 @@ export class FileService implements IFileService {
 
         try {
             fs.writeFileSync(this._configFilePath, data);
-        } catch (e) {
+        } catch {
             FileService._LOGGER.warning(`Could not create ${FileService._CONFIG_FILE_NAME}`);
         }
     }
@@ -57,14 +60,14 @@ export class FileService implements IFileService {
         let jsonData;
         try {
             jsonData = fs.readFileSync(this._configFilePath, 'utf-8');
-        } catch (e) {
+        } catch {
             FileService._LOGGER.error(`Can't open config file. Please make sure ${FileService._CONFIG_FILE_NAME} exists and is readable.`);
             process.exit(1);
         }
 
         try {
             return JSON.parse(jsonData);
-        } catch (e) {
+        } catch {
             FileService._LOGGER.error(`Can't read configs from ${FileService._CONFIG_FILE_NAME}. Please make sure its formatted correctly.`)
             process.exit(1);
         }
@@ -74,7 +77,7 @@ export class FileService implements IFileService {
         npmPackages: INpmPackage[],
         configFile: IConfigFile
     ): Promise<void> {
-        let filteredNpmPackageList: INpmPackage[] = [];
+        const filteredNpmPackageList: INpmPackage[] = [];
 
         const excludedSymlinkProjects: string[] | undefined = configFile.excludeSymlinks;
 
@@ -140,7 +143,7 @@ export class FileService implements IFileService {
             } else {
                 const distDirCandidate: string | undefined = await this._getProjectDistCandidates(npmPackage);
 
-                if (!!distDirCandidate) {
+                if (distDirCandidate) {
                     return PathUtil.relative(this._rootDir, distDirCandidate);
                 }
             }
@@ -152,14 +155,14 @@ export class FileService implements IFileService {
     private async _getProjectDistCandidates(npmPackage: INpmPackage): Promise<string | undefined> {
         const searchPatterns: string = PathUtil.join(this._rootDir, "**", FileService._PACKAGE_JSON_FILE_NAME);
 
-        const pgkmIgnoreFilePath: string = PathUtil.join(this._rootDir, FileService._PKGM_IGNORE_FILE_NAME);
-        const pkgmIgnoreEntries: string[] = await ListUtil.readList(pgkmIgnoreFilePath);
+        const pkgmIgnoreFilePath: string = PathUtil.join(this._rootDir, FileService._PKGM_IGNORE_FILE_NAME);
+        const pkgmIgnoreEntries: string[] = await ListUtil.readList(pkgmIgnoreFilePath);
 
         const ignoreList: string[] = [...FileService._IGNORE_LIST, ...pkgmIgnoreEntries];
 
         const packageJsonDistFilePaths: string[] = await glob(searchPatterns, {ignore: ignoreList});
         const matchingPackageJsonFilePath: string | undefined = packageJsonDistFilePaths.filter((packageJsonDistFilePath) => {
-            const isInDistDirectory: boolean = packageJsonDistFilePath.split("/").includes("dist");
+            const isInDistDirectory: boolean = packageJsonDistFilePath.split(Path.sep).includes("dist");
 
             const packageJson: IPackageJson = JsonUtil.readJson<IPackageJson>(packageJsonDistFilePath);
             const hasSamePackageName: boolean = packageJson.name === npmPackage.packageJson.name;
@@ -167,7 +170,7 @@ export class FileService implements IFileService {
             return isInDistDirectory && hasSamePackageName;
         })[0];
 
-        if (!!matchingPackageJsonFilePath) {
+        if (matchingPackageJsonFilePath) {
             const matchingPackageJsonDirPath = Path.dirname(matchingPackageJsonFilePath);
             return Promise.resolve(matchingPackageJsonDirPath)
         }

@@ -64,10 +64,8 @@ const buildService: IBuildService = new BuildService( linkerService, executionSe
 
 const logger: Logger = new Logger();
 
-// Runners
 const commandRunner: IRunner<CommandCallback, void, ICommandRunnerOptions> = new CommandRunner( npmProjectService, npmWorkspaceService );
 
-// Sections
 const mainNavigationSection: ISection<ECommand> = new MainNavigationSection();
 const initSection: ISection<void> = new InitSection( fileService, commandRunner, buildService, npmClientService, rootDir );
 const helpSection: ISection<void> = new HelpSection();

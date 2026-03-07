@@ -9,8 +9,10 @@ import {INpmDependencyService} from "./npm/i-npm-dependency.service";
 import {NpmPackageCollection} from "../definitions/npm-package-collection";
 import {IPackageJson} from "../definitions/i-package-json";
 import {IConfigFile} from "../definitions/i-config-file";
-import {NpmClientType} from "../definitions/npm/npm-client-type";
 
+/**
+ * Service for managing npm links between internal package dependencies
+ */
 export class LinkerService implements ILinkerService {
     private static readonly _PACKAGE_JSON_FILE_NAME: string = "package.json";
     private static readonly _DEFAULT_PACKAGE_JSON_VERSION: string = "0.0.1";
