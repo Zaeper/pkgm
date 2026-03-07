@@ -59,6 +59,7 @@ jobs:
     needs: [test, lint]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: release
     permissions:
       contents: read
       id-token: write
