@@ -348,7 +348,7 @@ async function executeTask(
             ) => await unlinkTargets( npmPackageCollection, unscopedNpmPackageCollection ), mode, EIncludeMode.ALL, false, true, commandRunnerOptions, npmPackageScopes );
 
             break;
-        case(ECommand.VERSION_MANAGER.toLowerCase()):
+        case(ECommand.VERSION_MANAGER.toLowerCase()): {
             let task: EVersionManagerTask;
 
             if ( mode === EMode.INTERACTIVE ) {
@@ -393,7 +393,7 @@ async function executeTask(
             if ( task === EVersionManagerTask.UPDATE_VERSIONS ) {
                 const dryRunArg: string = "--dry-run";
 
-                let dryRun: boolean = args[dryRunArg] !== undefined ? args[dryRunArg] : false;
+                const dryRun: boolean = args[dryRunArg] !== undefined ? args[dryRunArg] : false;
                 const runCommand: string[] = [];
                 runCommand.push( task );
 
@@ -413,8 +413,9 @@ async function executeTask(
                 ): Promise<void> => await checkPackageVersions( npmPackageCollection, unscopedNpmPackageCollection, configFile, mode, dryRun ), mode, EIncludeMode.ALL, false, true, commandRunnerOptions, npmPackageScopes );
             }
             break;
+        }
         case(ECommand.RUN.toLowerCase()):
-        case(ECommand.RUN_ASYNC.toLowerCase()):
+        case(ECommand.RUN_ASYNC.toLowerCase()): {
             const runAsync: boolean = command.toLowerCase() === ECommand.RUN_ASYNC.toLowerCase();
 
             let runCommand: string | undefined;
@@ -473,7 +474,8 @@ async function executeTask(
                 configFile: IConfigFile
             ) => await npmPackageService.run( npmPackageCollection.packages, runCommand!, commandType, runAsync, configFile ), mode, EIncludeMode.ALL, false, true, commandRunnerOptions, npmPackageScopes );
             break;
-        case(ECommand.INSTALL.toLowerCase()):
+        }
+        case(ECommand.INSTALL.toLowerCase()): {
             const dependencyNameParameterName: string = "--dependency-name";
             const dependencyCategoryParameterName: string = "--dependency-category";
 
@@ -537,7 +539,7 @@ async function executeTask(
             };
 
             let installPackageOptions: IInstallNpmDependencyOptions | undefined;
-            if ( !!dependencyName ) {
+            if ( dependencyName ) {
                 installPackageOptions = {
                     dependencyName,
                     dependencyCategory
@@ -551,6 +553,7 @@ async function executeTask(
             ) => await installTargets( npmPackageCollection, configFile, installPackageOptions ), mode, EIncludeMode.ALL, false, true, commandRunnerOptions, npmPackageScopes );
 
             break;
+        }
         case(ECommand.BUILD.toLowerCase()):
             commandRunnerOptions = {
                 command: ECommand.BUILD
@@ -573,7 +576,7 @@ async function executeTask(
                 configFile: IConfigFile
             ) => await buildWatch( npmPackageCollection, unscopedNpmPackageCollection, configFile ), mode, EIncludeMode.NONE, false, true, commandRunnerOptions, npmPackageScopes );
             break;
-        case(ECommand.REINIT.toLowerCase()):
+        case(ECommand.REINIT.toLowerCase()): {
             const includePackageLockParameterName: string = "--delete-package-lock";
             let includePackageLock: boolean;
             if ( mode === EMode.INTERACTIVE ) {
@@ -611,6 +614,7 @@ async function executeTask(
                 configFile: IConfigFile
             ) => await reinit( npmPackageCollection, unscopedNpmPackageCollection, includePackageLock, configFile ), mode, EIncludeMode.ALL, false, true, commandRunnerOptions, npmPackageScopes );
             break;
+        }
     }
 }
 
@@ -628,7 +632,7 @@ async function main(): Promise<void> {
         await initSection.render();
     }
 
-    const args = await defineArgs( command );
+    await defineArgs( command );
 
     return;
 }
