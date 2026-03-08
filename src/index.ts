@@ -46,6 +46,7 @@ import { INpmClientService } from "./services/npm/i-npm-client.service";
 import { NpmClientService } from "./services/npm/npm-client.service";
 import { INpmProject } from "./definitions/npm/i-npm-project";
 import { IInstallNpmDependencyOptions } from "./definitions/i-install-npm-dependency-options";
+import { EVersionConflictStrategy } from "./definitions/e-version-conflict-strategy";
 
 const rootDir: string = PathUtil.normalize( process.cwd() );
 
@@ -113,7 +114,6 @@ async function defineArgs(command: string | undefined) {
         case(ECommand.LIST.toLowerCase()):
         case(ECommand.LIST_DEPENDENCIES.toLowerCase()):
         case(ECommand.LIST_SCRIPTS.toLowerCase()):
-        case(ECommand.LINK.toLowerCase()):
         case(ECommand.UNLINK.toLowerCase()):
         case(ECommand.RUN.toLowerCase()):
         case(ECommand.RUN_ASYNC.toLowerCase()):
@@ -123,17 +123,25 @@ async function defineArgs(command: string | undefined) {
                 ...DEFAULT_ARGS
             } );
             break;
+        case(ECommand.LINK.toLowerCase()):
+            args = arg( {
+                ...DEFAULT_ARGS,
+                '--version-conflict-strategy': String
+            } );
+            break;
         case(ECommand.INSTALL.toLowerCase()):
             args = arg( {
                 ...DEFAULT_ARGS,
                 '--dependency-name': String,
-                '--dependency-category': String
+                '--dependency-category': String,
+                '--version-conflict-strategy': String
             } );
             break;
         case(ECommand.REINIT.toLowerCase()):
             args = arg( {
                 ...DEFAULT_ARGS,
-                '--delete-package-lock': Boolean
+                '--delete-package-lock': Boolean,
+                '--version-conflict-strategy': String
             } );
             break;
     }
@@ -325,18 +333,57 @@ async function executeTask(
 
             await commandRunner.run( configFile, async (npmPackageCollection: NpmPackageCollection) => await listTargetsWithScripts( npmPackageCollection ), mode, EIncludeMode.ALL, false, false, commandRunnerOptions, npmPackageScopes );
             break;
-        case(ECommand.LINK.toLowerCase()):
-            commandRunnerOptions = {
-                command: ECommand.LINK
+        case(ECommand.LINK.toLowerCase()): {
+            const versionConflictStrategyParameterName: string = "--version-conflict-strategy";
+            let versionConflictStrategy: EVersionConflictStrategy | undefined;
+
+            if ( mode === EMode.INTERACTIVE ) {
+                console.clear();
+                await LoggerUtil.printWelcome();
+                versionConflictStrategy = await select( {
+                    message: 'How should version conflicts be handled?',
+                    choices: [
+                        {
+                            name: `None ${ chalk.gray( "Default npm behavior" ) }`,
+                            value: EVersionConflictStrategy.NONE
+                        }, {
+                            name: `Legacy peer deps ${ chalk.gray( "--legacy-peer-deps" ) }`,
+                            value: EVersionConflictStrategy.LEGACY_PEER_DEPS
+                        }, {
+                            name: `Force ${ chalk.gray( "--force" ) }`,
+                            value: EVersionConflictStrategy.FORCE
+                        }
+                    ],
+                    loop: false,
+                    default: EVersionConflictStrategy.NONE
+                } );
+            } else {
+                const strategyArg = args[versionConflictStrategyParameterName];
+                if ( strategyArg ) {
+                    versionConflictStrategy = strategyArg as EVersionConflictStrategy;
+                }
+            }
+
+            const configWithStrategy: IConfigFile = {
+                ...configFile,
+                versionConflictStrategy: versionConflictStrategy ?? configFile.versionConflictStrategy
             };
 
-            await commandRunner.run( configFile, async (
+            commandRunnerOptions = {
+                command: ECommand.LINK,
+                parameters: {
+                    [versionConflictStrategyParameterName]: versionConflictStrategy
+                }
+            };
+
+            await commandRunner.run( configWithStrategy, async (
                 npmPackageCollection: NpmPackageCollection,
                 unscopedNpmPackageCollection: NpmPackageCollection,
                 configFile: IConfigFile
             ) => await linkTargets( npmPackageCollection, unscopedNpmPackageCollection, configFile ), mode, EIncludeMode.ALL, false, true, commandRunnerOptions, npmPackageScopes );
 
             break;
+        }
         case(ECommand.UNLINK.toLowerCase()):
             commandRunnerOptions = {
                 command: ECommand.UNLINK
@@ -478,9 +525,11 @@ async function executeTask(
         case(ECommand.INSTALL.toLowerCase()): {
             const dependencyNameParameterName: string = "--dependency-name";
             const dependencyCategoryParameterName: string = "--dependency-category";
+            const versionConflictStrategyParameterName: string = "--version-conflict-strategy";
 
             let dependencyName: string | undefined;
             let dependencyCategory: "dependency" | "peerDependency" | "devDependency" | undefined;
+            let versionConflictStrategy: EVersionConflictStrategy | undefined;
 
             if ( mode === EMode.INTERACTIVE ) {
                 console.clear();
@@ -525,26 +574,49 @@ async function executeTask(
                         default: "dependency"
                     } );
                 }
+
+                console.clear();
+                await LoggerUtil.printWelcome();
+                versionConflictStrategy = await select( {
+                    message: 'How should version conflicts be handled?',
+                    choices: [
+                        {
+                            name: `None ${ chalk.gray( "Default npm behavior" ) }`,
+                            value: EVersionConflictStrategy.NONE
+                        }, {
+                            name: `Legacy peer deps ${ chalk.gray( "--legacy-peer-deps" ) }`,
+                            value: EVersionConflictStrategy.LEGACY_PEER_DEPS
+                        }, {
+                            name: `Force ${ chalk.gray( "--force" ) }`,
+                            value: EVersionConflictStrategy.FORCE
+                        }
+                    ],
+                    loop: false,
+                    default: EVersionConflictStrategy.NONE
+                } );
             } else {
                 dependencyName = args[dependencyNameParameterName];
                 dependencyCategory = args[dependencyCategoryParameterName];
+                const strategyArg = args[versionConflictStrategyParameterName];
+                if ( strategyArg ) {
+                    versionConflictStrategy = strategyArg as EVersionConflictStrategy;
+                }
             }
 
             commandRunnerOptions = {
                 command: ECommand.INSTALL,
                 parameters: {
                     [dependencyNameParameterName]: dependencyName,
-                    [dependencyCategoryParameterName]: dependencyCategory
+                    [dependencyCategoryParameterName]: dependencyCategory,
+                    [versionConflictStrategyParameterName]: versionConflictStrategy
                 }
             };
 
-            let installPackageOptions: IInstallNpmDependencyOptions | undefined;
-            if ( dependencyName ) {
-                installPackageOptions = {
-                    dependencyName,
-                    dependencyCategory
-                };
-            }
+            const installPackageOptions: IInstallNpmDependencyOptions | undefined = {
+                dependencyName,
+                dependencyCategory,
+                versionConflictStrategy
+            };
 
             await commandRunner.run( configFile, async (
                 npmPackageCollection: NpmPackageCollection,
@@ -578,7 +650,10 @@ async function executeTask(
             break;
         case(ECommand.REINIT.toLowerCase()): {
             const includePackageLockParameterName: string = "--delete-package-lock";
+            const versionConflictStrategyParameterName: string = "--version-conflict-strategy";
             let includePackageLock: boolean;
+            let versionConflictStrategy: EVersionConflictStrategy | undefined;
+
             if ( mode === EMode.INTERACTIVE ) {
                 console.clear();
                 await LoggerUtil.printWelcome();
@@ -596,19 +671,50 @@ async function executeTask(
                     loop: false,
                     default: false
                 } );
+
+                console.clear();
+                await LoggerUtil.printWelcome();
+                versionConflictStrategy = await select( {
+                    message: 'How should version conflicts be handled?',
+                    choices: [
+                        {
+                            name: `None ${ chalk.gray( "Default npm behavior" ) }`,
+                            value: EVersionConflictStrategy.NONE
+                        }, {
+                            name: `Legacy peer deps ${ chalk.gray( "--legacy-peer-deps" ) }`,
+                            value: EVersionConflictStrategy.LEGACY_PEER_DEPS
+                        }, {
+                            name: `Force ${ chalk.gray( "--force" ) }`,
+                            value: EVersionConflictStrategy.FORCE
+                        }
+                    ],
+                    loop: false,
+                    default: EVersionConflictStrategy.NONE
+                } );
             } else {
                 includePackageLock = args[includePackageLockParameterName];
+                const strategyArg = args[versionConflictStrategyParameterName];
+                if ( strategyArg ) {
+                    versionConflictStrategy = strategyArg as EVersionConflictStrategy;
+                }
             }
+
+            // Apply version conflict strategy to config for the reinit process
+            const configWithStrategy: IConfigFile = {
+                ...configFile,
+                versionConflictStrategy: versionConflictStrategy ?? configFile.versionConflictStrategy
+            };
 
             commandRunnerOptions = {
                 command: ECommand.REINIT,
                 symlinkedProjectsOnly: true,
                 parameters: {
-                    [includePackageLockParameterName]: undefined
+                    [includePackageLockParameterName]: undefined,
+                    [versionConflictStrategyParameterName]: versionConflictStrategy
                 }
             };
 
-            await commandRunner.run( configFile, async (
+            await commandRunner.run( configWithStrategy, async (
                 npmPackageCollection: NpmPackageCollection,
                 unscopedNpmPackageCollection: NpmPackageCollection,
                 configFile: IConfigFile

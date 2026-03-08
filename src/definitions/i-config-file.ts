@@ -1,4 +1,5 @@
 import {NpmClientType} from "./npm/npm-client-type";
+import {EVersionConflictStrategy} from "./e-version-conflict-strategy";
 
 export interface IConfigFile {
     npmClient: NpmClientType,
@@ -7,5 +8,6 @@ export interface IConfigFile {
     workspaces?: string[];
     projects: string[];
     excludeSymlinks?: string[];
-    versions?: Record<string, string>
+    versions?: Record<string, string>,
+    versionConflictStrategy?: EVersionConflictStrategy
 }

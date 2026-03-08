@@ -12,6 +12,7 @@ import {INpmDependencyService} from "./npm/i-npm-dependency.service";
 import {IFileService} from "./i-file.service";
 import {IConfigFile} from "../definitions/i-config-file";
 import {ENpmPackageType} from "../definitions/npm/e-npm-package-type";
+import {EVersionConflictStrategy} from "../definitions/e-version-conflict-strategy";
 
 /**
  * Service for building and cleaning npm packages in a monorepo
@@ -36,13 +37,35 @@ export class BuildService implements IBuildService {
     ): Promise<void> {
         const npmPackageProcessList: INpmPackage[] = this._npmDependencyService.getSortedNpmPackagesByInternalDependencies(npmPackageCollection, unscopedNpmPackageCollection);
 
+        const versionConflictFlag = (): string => {
+            if (configFile.npmClient === 'pnpm') {
+                const baseFlags = " --config.auto-install-peers=true --shamefully-hoist";
+                switch ( configFile.versionConflictStrategy ) {
+                    case EVersionConflictStrategy.FORCE:
+                        return baseFlags + " --force";
+                    default:
+                        return baseFlags;
+                }
+            }
+            switch ( configFile.versionConflictStrategy ) {
+                case EVersionConflictStrategy.LEGACY_PEER_DEPS:
+                    return " --legacy-peer-deps";
+                case EVersionConflictStrategy.FORCE:
+                    return " --force";
+                default:
+                    return "";
+            }
+        };
+
+        const installCommand = "install" + versionConflictFlag();
+
         for (const npmPackage of npmPackageProcessList) {
             const projectName = npmPackage.packageJson.name;
             
             LoggerUtil.printHint(projectName);
             await this._linkerService.applyLinks(npmPackage, unscopedNpmPackageCollection, configFile);
 
-            await this._executionService.executeScript([npmPackage], "install", ECommandType.NPM, configFile.npmClient);
+            await this._executionService.executeScript([npmPackage], installCommand, ECommandType.NPM, configFile.npmClient);
 
             if(npmPackage.type == ENpmPackageType.PROJECT) {
                 await this._executionService.executeScript([npmPackage], "build", ECommandType.NPM_SCRIPT, configFile.npmClient);

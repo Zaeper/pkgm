@@ -15,6 +15,7 @@ import { IPackageLockJson } from "../../definitions/i-package-lock-json";
 import fs from "fs";
 import { IConfigFile } from "../../definitions/i-config-file";
 import { IInstallNpmDependencyOptions } from "../../definitions/i-install-npm-dependency-options";
+import { EVersionConflictStrategy } from "../../definitions/e-version-conflict-strategy";
 
 export class NpmPackageService<T extends INpmPackage> implements INpmPackageService<T> {
     protected static readonly _LOGGER: Logger = new Logger();
@@ -51,9 +52,6 @@ export class NpmPackageService<T extends INpmPackage> implements INpmPackageServ
                 try {
                     packageLockJson = JsonUtil.readJson<IPackageLockJson>( packageJsonLockPath );
                 } catch {
-                    /**
-                     * silently fail
-                     */
                 }
             }
 
@@ -186,8 +184,29 @@ export class NpmPackageService<T extends INpmPackage> implements INpmPackageServ
             }
         };
 
+        const versionConflictFlag = (): string | undefined => {
+            const strategy = installNpmPackageOptions?.versionConflictStrategy ?? configFile.versionConflictStrategy;
+            if (configFile.npmClient === 'pnpm') {
+                const baseFlags = "--config.auto-install-peers=true --shamefully-hoist";
+                switch ( strategy ) {
+                    case EVersionConflictStrategy.FORCE:
+                        return baseFlags + " --force";
+                    default:
+                        return baseFlags;
+                }
+            }
+            switch ( strategy ) {
+                case EVersionConflictStrategy.LEGACY_PEER_DEPS:
+                    return "--legacy-peer-deps";
+                case EVersionConflictStrategy.FORCE:
+                    return "--force";
+                default:
+                    return undefined;
+            }
+        };
+
         const npmCommand: string = [
-            'install', installNpmPackageOptions?.dependencyName, dependencyCategorySuffix()
+            'install', installNpmPackageOptions?.dependencyName, dependencyCategorySuffix(), versionConflictFlag()
         ].filter( Boolean ).join( " " );
 
         return this._executeScript( npmCommand, ECommandType.NPM, false, packages, configFile );
