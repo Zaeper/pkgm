@@ -183,7 +183,7 @@ describe("NpmPackageService", () => {
 
         it("should use configured npm client", async () => {
             const packages = [createPackage("@test/pkg1", "/pkg1")];
-            const configFile: IConfigFile = { npmClient: "pnpm", projects: [] };
+            const configFile: IConfigFile = { npmClient: "npm", projects: [] };
 
             await npmPackageService.install(packages, configFile);
 
@@ -191,7 +191,7 @@ describe("NpmPackageService", () => {
                 packages,
                 "install",
                 ECommandType.NPM,
-                "pnpm",
+                "npm",
                 false
             );
         });

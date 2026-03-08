@@ -18,6 +18,7 @@ import {EIncludeMode} from "../runners/e-include-mode";
 import {NpmClientType} from "../definitions/npm/npm-client-type";
 import {INpmClientService} from "../services/npm/i-npm-client.service";
 import {IBuildService} from "../services/i-build.service";
+import {EVersionConflictStrategy} from "../definitions/e-version-conflict-strategy";
 
 export class InitSection implements ISection<void> {
     constructor(private readonly _fileService: IFileService, private readonly _commandRunner: IRunner<CommandCallback, void, ICommandRunnerOptions>, private readonly _buildService: IBuildService, private readonly _npmClientService: INpmClientService, private readonly _rootDir: string) {
@@ -180,9 +181,32 @@ export class InitSection implements ISection<void> {
             },], loop: false, default: false
         });
 
+        let versionConflictStrategy: EVersionConflictStrategy = EVersionConflictStrategy.NONE;
+        if (shouldRunInitialBuild) {
+            console.clear();
+            await LoggerUtil.printWelcome();
+            versionConflictStrategy = await select({
+                message: 'How should version conflicts be handled?',
+                choices: [
+                    {
+                        name: 'None (Default npm behavior)',
+                        value: EVersionConflictStrategy.NONE
+                    }, {
+                        name: 'Legacy peer deps (--legacy-peer-deps)',
+                        value: EVersionConflictStrategy.LEGACY_PEER_DEPS
+                    }, {
+                        name: 'Force (--force)',
+                        value: EVersionConflictStrategy.FORCE
+                    }
+                ],
+                loop: false,
+                default: EVersionConflictStrategy.NONE
+            });
+        }
+
         LoggerUtil.printHint("Writing configs into pkgm.json")
         const initializationSpinner: Ora = ora('Initializing').start();
-        const configFile: IConfigFile = this._createConfigFile(npmPackageCollection, excludeSymlinks, npmClient);
+        const configFile: IConfigFile = this._createConfigFile(npmPackageCollection, excludeSymlinks, npmClient, versionConflictStrategy);
         this._fileService.writeConfigFile(configFile);
 
         const initOutputs: string[] = ["Everything is set up", "pkgm.json` configuration file created."];
@@ -212,13 +236,19 @@ export class InitSection implements ISection<void> {
         await this._continueToMainNavigationPrompt();
     }
 
-    private _createConfigFile(npmPackageCollection: NpmPackageCollection, excludeSymlinks: string[], npmClient: NpmClientType): IConfigFile {
-        return {
+    private _createConfigFile(npmPackageCollection: NpmPackageCollection, excludeSymlinks: string[], npmClient: NpmClientType, versionConflictStrategy?: EVersionConflictStrategy): IConfigFile {
+        const configFile: IConfigFile = {
             workspaces: npmPackageCollection.workspacePaths,
             projects: npmPackageCollection.projectPaths,
             excludeSymlinks: excludeSymlinks,
             npmClient: npmClient
+        };
+        
+        if (versionConflictStrategy && versionConflictStrategy !== EVersionConflictStrategy.NONE) {
+            configFile.versionConflictStrategy = versionConflictStrategy;
         }
+        
+        return configFile;
     }
 
     private async _continueToMainNavigationPrompt() {

@@ -9,6 +9,8 @@ import {INpmDependencyService} from "./npm/i-npm-dependency.service";
 import {NpmPackageCollection} from "../definitions/npm-package-collection";
 import {IPackageJson} from "../definitions/i-package-json";
 import {IConfigFile} from "../definitions/i-config-file";
+import {EVersionConflictStrategy} from "../definitions/e-version-conflict-strategy";
+import {PathUtil} from "../utils/path.util";
 
 /**
  * Service for managing npm links between internal package dependencies
@@ -30,6 +32,8 @@ export class LinkerService implements ILinkerService {
         unscopedNpmPackageCollection: NpmPackageCollection,
         configFile: IConfigFile
     ): Promise<void> {
+        const versionConflictFlag = this._getVersionConflictFlag(configFile);
+
         const packageDependencies: Record<string, string> = this._dependencyService.getNpmPackageInternalDependencies(npmPackage, unscopedNpmPackageCollection);
         const packageDevDependencies: Record<string, string> = this._dependencyService.getNpmPackageDevInternalDependencies(npmPackage, unscopedNpmPackageCollection);
         const packagePeerDependencies: Record<string, string> = this._dependencyService.getNpmPackagePeerInternalDependencies(npmPackage, unscopedNpmPackageCollection);
@@ -45,7 +49,7 @@ export class LinkerService implements ILinkerService {
             const saveCommand: string = type.length > 0 ? `--save-${type}` : "--save";
             
             if (dependenciesToLink.length !== 0) {
-                await this._executionService.executeScript([npmPackage], `link ${dependenciesToLink.join(" ")} ${saveCommand}`, ECommandType.NPM, configFile.npmClient);
+                await this._executionService.executeScript([npmPackage], `link ${dependenciesToLink.join(" ")} ${saveCommand}${versionConflictFlag}`, ECommandType.NPM, configFile.npmClient);
             }
         }
 
@@ -181,6 +185,17 @@ export class LinkerService implements ILinkerService {
 
         if (amountUpdated > 0) {
             return updatedDependencyRecord;
+        }
+    }
+
+    private _getVersionConflictFlag(configFile: IConfigFile): string {
+        switch (configFile.versionConflictStrategy) {
+            case EVersionConflictStrategy.LEGACY_PEER_DEPS:
+                return " --legacy-peer-deps";
+            case EVersionConflictStrategy.FORCE:
+                return " --force";
+            default:
+                return "";
         }
     }
 }
