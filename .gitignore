@@ -1,5 +1,6 @@
 # logs
 logs
+data/
 
 # API keys and secrets
 .env
