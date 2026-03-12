@@ -32,6 +32,10 @@ export class MainNavigationSection implements ISection<ECommand> {
                     value: ECommand.LIST_SCRIPTS,
                     description: ECommandDescriptions.LIST_SCRIPTS,
                 }, {
+                    name: this._assembleMenuItem("Affected", ECommand.AFFECTED),
+                    value: ECommand.AFFECTED,
+                    description: ECommandDescriptions.AFFECTED,
+                }, {
                     name: this._assembleMenuItem("Link", ECommand.LINK),
                     value: ECommand.LINK,
                     description: ECommandDescriptions.LINK,

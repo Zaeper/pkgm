@@ -2,6 +2,7 @@ export enum ECommandDescriptions {
     LIST = 'List all configured projects.',
     LIST_DEPENDENCIES = 'List all configured projects along with their dependencies. Projects will be ordered in processing order.',
     LIST_SCRIPTS = 'List all configured projects along with their scripts.',
+    AFFECTED = 'Find publishable projects affected by changes in the given paths. Outputs JSON for CI integration.',
     LINK = 'Create symlinks of the projects and replaces the projects dependency with the file protocol.',
     UNLINK = 'Removes symlinks of the projects and replaces the dependencies with the package version.',
     RUN = 'Run a specific npm script over your projects.',

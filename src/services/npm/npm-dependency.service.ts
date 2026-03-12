@@ -6,6 +6,7 @@
 
 import Logger from "@ptkdev/logger";
 import chalk from "chalk";
+import path from "path";
 import {INpmDependencyService} from "./i-npm-dependency.service";
 import {INpmProject} from "../../definitions/npm/i-npm-project";
 import {INpmWorkspace} from "../../definitions/npm/i-npm-workspace";
@@ -331,5 +332,78 @@ export class NpmDependencyService implements INpmDependencyService {
         return {
             ...peerDependencies, ...devDependencies, ...dependencies
         };
+    }
+
+    /**
+     * Finds all publishable packages that are transitively affected by changes
+     * in the given paths. Uses BFS through the reverse internal dependency graph.
+     * @param changedPaths Paths (absolute or relative) of changed packages/libraries
+     * @param npmPackageCollection Collection of all npm packages
+     * @param rootDir Root directory for resolving relative paths
+     */
+    public getAffectedPublishablePackages(
+        changedPaths: string[],
+        npmPackageCollection: NpmPackageCollection,
+        rootDir: string
+    ): INpmPackage[] {
+        // Resolve all changed paths to absolute
+        const absoluteChangedPaths: string[] = changedPaths.map(
+            (p: string) => path.isAbsolute(p) ? p : path.resolve(rootDir, p)
+        );
+
+        // Build reverse dependency map: packageName -> [names of packages that depend on it]
+        const reverseDeps: Map<string, string[]> = new Map();
+        for (const pkg of npmPackageCollection.packages) {
+            const internalDeps: Record<string, string> = this.getSummarizedNpmPackageInternalDependencies(
+                pkg, npmPackageCollection
+            );
+            for (const depName of Object.keys(internalDeps)) {
+                if (!reverseDeps.has(depName)) {
+                    reverseDeps.set(depName, []);
+                }
+                reverseDeps.get(depName)!.push(pkg.packageJson.name);
+            }
+        }
+
+        // Match changed paths to package names
+        const changedPackageNames: Set<string> = new Set();
+        for (const changedPath of absoluteChangedPaths) {
+            for (const pkg of npmPackageCollection.packages) {
+                if (pkg.path === changedPath || changedPath.startsWith(pkg.path + path.sep) || pkg.path.startsWith(changedPath + path.sep)) {
+                    changedPackageNames.add(pkg.packageJson.name);
+                }
+            }
+        }
+
+        // BFS through reverse dependency graph
+        const visited: Set<string> = new Set();
+        const queue: string[] = [...changedPackageNames];
+        const affectedPublishable: INpmPackage[] = [];
+        const lookupMap: Record<string, INpmPackage> = npmPackageCollection.packagesLookupMap;
+
+        while (queue.length > 0) {
+            const current: string = queue.shift()!;
+            if (visited.has(current)) continue;
+            visited.add(current);
+
+            const pkg: INpmPackage | undefined = lookupMap[current];
+            if (pkg) {
+                const hasPublishScript: boolean = !!pkg.packageJson.scripts &&
+                    Object.keys(pkg.packageJson.scripts).some((s: string) => s.startsWith("publish:"));
+                if (hasPublishScript) {
+                    affectedPublishable.push(pkg);
+                }
+            }
+
+            // Follow reverse deps
+            const dependents: string[] = reverseDeps.get(current) || [];
+            for (const dep of dependents) {
+                if (!visited.has(dep)) {
+                    queue.push(dep);
+                }
+            }
+        }
+
+        return affectedPublishable;
     }
 }

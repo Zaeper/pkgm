@@ -99,4 +99,19 @@ export interface INpmDependencyService {
         npmPackage: INpmPackage,
         unscopedNpmPackageCollection: NpmPackageCollection
     ): Record<string, string>;
+
+    /**
+     * Finds all publishable packages (those with publish: scripts) that are
+     * transitively affected by changes in the given paths.
+     * Uses BFS through the reverse internal dependency graph.
+     * @param changedPaths Paths (absolute or relative) of changed packages/libraries
+     * @param npmPackageCollection Collection of all npm packages
+     * @param rootDir Root directory for resolving relative paths
+     * @returns Array of affected publishable packages
+     */
+    getAffectedPublishablePackages(
+        changedPaths: string[],
+        npmPackageCollection: NpmPackageCollection,
+        rootDir: string
+    ): INpmPackage[];
 }

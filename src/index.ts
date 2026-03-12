@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import * as process from "process";
+import * as fs from "fs";
 import { input, select } from "@inquirer/prompts";
 import chalk from "chalk";
 import Logger from "@ptkdev/logger";
@@ -47,6 +48,8 @@ import { NpmClientService } from "./services/npm/npm-client.service";
 import { INpmProject } from "./definitions/npm/i-npm-project";
 import { IInstallNpmDependencyOptions } from "./definitions/i-install-npm-dependency-options";
 import { EVersionConflictStrategy } from "./definitions/e-version-conflict-strategy";
+import { IPackageJson } from "./definitions/i-package-json";
+import { JsonUtil } from "./utils/json.util";
 
 const rootDir: string = PathUtil.normalize( process.cwd() );
 
@@ -108,6 +111,13 @@ async function defineArgs(command: string | undefined) {
                     ...DEFAULT_ARGS
                 } );
             }
+            break;
+        case(ECommand.AFFECTED.toLowerCase()):
+            args = arg( {
+                ...DEFAULT_ARGS,
+                '--changed-path': [ String ],
+                '--scan': Boolean
+            } );
             break;
         case(ECommand.EXIT.toLowerCase()):
         case(ECommand.HELP.toLowerCase()):
@@ -326,6 +336,110 @@ async function executeTask(
                 unscopedNpmPackageCollection: NpmPackageCollection
             ) => await listTargetsWithDependencies( npmPackageCollection, unscopedNpmPackageCollection ), mode, EIncludeMode.ALL, true, false, commandRunnerOptions, npmPackageScopes );
             break;
+        case(ECommand.AFFECTED.toLowerCase()): {
+            let changedPaths: string[];
+            const scanMode: boolean = args['--scan'] === true;
+
+            if ( mode === EMode.INTERACTIVE ) {
+                console.clear();
+                await LoggerUtil.printWelcome();
+                const pathInput: string = await input( {
+                    message: 'Enter changed paths (comma-separated)'
+                } );
+                changedPaths = pathInput.split( ',' ).map( ( p: string ) => p.trim() ).filter( Boolean );
+            } else {
+                changedPaths = args['--changed-path'] ?? [];
+                if ( changedPaths.length === 0 ) {
+                    logger.error( "Please provide at least one --changed-path" );
+                    process.exit( 1 );
+                }
+            }
+
+            const printAffectedResult = ( affectedPackages: INpmPackage[] ): void => {
+                if ( mode === EMode.COMMAND ) {
+                    const result = affectedPackages.map( ( pkg: INpmPackage ) => {
+                        const relativePath: string = pkg.path.startsWith( rootDir )
+                            ? pkg.path.substring( rootDir.length + 1 )
+                            : pkg.path;
+                        return {
+                            name: pkg.packageJson.name,
+                            path: relativePath
+                        };
+                    } );
+                    console.log( JSON.stringify( result ) );
+                } else {
+                    LoggerUtil.printInfo( `Found ${ affectedPackages.length } affected publishable ${ affectedPackages.length === 1 ? 'package' : 'packages' }.` );
+                    affectedPackages.forEach( ( pkg: INpmPackage ) => {
+                        LoggerUtil.printIndented( `${ chalk.cyan( pkg.packageJson.name ) } ${ chalk.gray( pkg.path ) }`, 2 );
+                    } );
+                }
+            };
+
+            if ( scanMode ) {
+                // Scan filesystem for package.json files without needing pkgm.json
+                const SKIP_DIRS: Set<string> = new Set( [ 'node_modules', '.git', 'dist', '.gradle', 'build', '.pkgm' ] );
+
+                function scanForPackages( dir: string ): INpmPackage[] {
+                    const packages: INpmPackage[] = [];
+                    let entries: fs.Dirent[];
+                    try {
+                        entries = fs.readdirSync( dir, { withFileTypes: true } );
+                    } catch {
+                        return packages;
+                    }
+
+                    for ( const entry of entries ) {
+                        if ( SKIP_DIRS.has( entry.name ) ) continue;
+                        const fullPath: string = PathUtil.join( dir, entry.name );
+
+                        if ( entry.isDirectory() ) {
+                            packages.push( ...scanForPackages( fullPath ) );
+                        } else if ( entry.name === 'package.json' ) {
+                            try {
+                                const packageJson: IPackageJson = JsonUtil.readJson<IPackageJson>( fullPath );
+                                packages.push( {
+                                    type: ENpmPackageType.PROJECT,
+                                    path: PathUtil.normalize( dir ),
+                                    packageJsonPath: fullPath,
+                                    packageJson
+                                } );
+                            } catch {
+                                // Skip unreadable package.json files
+                            }
+                        }
+                    }
+
+                    return packages;
+                }
+
+                const allPackages: INpmPackage[] = scanForPackages( rootDir )
+                    .filter( ( pkg: INpmPackage ) => pkg.path !== rootDir );
+                const collection: NpmPackageCollection = new NpmPackageCollection(
+                    <INpmProject[]>allPackages, []
+                );
+
+                const affectedPackages: INpmPackage[] = npmDependencyService.getAffectedPublishablePackages(
+                    changedPaths, collection, rootDir
+                );
+
+                printAffectedResult( affectedPackages );
+            } else {
+                commandRunnerOptions = {
+                    command: ECommand.AFFECTED
+                };
+
+                await commandRunner.run( configFile, async (
+                    npmPackageCollection: NpmPackageCollection,
+                    unscopedNpmPackageCollection: NpmPackageCollection
+                ) => {
+                    const affectedPackages: INpmPackage[] = npmDependencyService.getAffectedPublishablePackages(
+                        changedPaths, unscopedNpmPackageCollection, rootDir
+                    );
+                    printAffectedResult( affectedPackages );
+                }, mode, EIncludeMode.ALL, true, false, commandRunnerOptions, npmPackageScopes );
+            }
+            break;
+        }
         case(ECommand.LIST_SCRIPTS.toLowerCase()):
             commandRunnerOptions = {
                 command: ECommand.LIST_SCRIPTS
@@ -729,10 +843,14 @@ function showHelp(): void {
 }
 
 async function main(): Promise<void> {
-    console.clear();
-    await LoggerUtil.printWelcome();
-
     const command: string = process.argv[2];
+    const isQuietCommand: boolean = command?.toLowerCase() === ECommand.AFFECTED.toLowerCase()
+        && process.argv.includes( '--scan' );
+
+    if ( !isQuietCommand ) {
+        console.clear();
+        await LoggerUtil.printWelcome();
+    }
 
     if ( command === undefined ) {
         await initSection.render();
@@ -744,5 +862,7 @@ async function main(): Promise<void> {
 }
 
 main().then( () => {
-    LoggerUtil.printInfo( "Exiting..." );
+    if ( !process.argv.includes( '--scan' ) ) {
+        LoggerUtil.printInfo( "Exiting..." );
+    }
 } );

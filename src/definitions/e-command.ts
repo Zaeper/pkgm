@@ -2,6 +2,7 @@ export enum ECommand {
     LIST = "list",
     LIST_DEPENDENCIES = "listDependencies",
     LIST_SCRIPTS = "listScripts",
+    AFFECTED = "affected",
     LINK = "link",
     UNLINK = "unlink",
     RUN = "run",
