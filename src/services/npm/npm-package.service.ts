@@ -51,8 +51,7 @@ export class NpmPackageService<T extends INpmPackage> implements INpmPackageServ
             if ( doesPackageLockJsonExist ) {
                 try {
                     packageLockJson = JsonUtil.readJson<IPackageLockJson>( packageJsonLockPath );
-                } catch {
-                }
+                } catch { /* ignore unreadable lock file */ }
             }
 
             const doesNodeModulesDirectoryExists: boolean = fs.existsSync( nodeModulesPath );

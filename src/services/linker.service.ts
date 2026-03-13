@@ -10,7 +10,6 @@ import {NpmPackageCollection} from "../definitions/npm-package-collection";
 import {IPackageJson} from "../definitions/i-package-json";
 import {IConfigFile} from "../definitions/i-config-file";
 import {EVersionConflictStrategy} from "../definitions/e-version-conflict-strategy";
-import {PathUtil} from "../utils/path.util";
 
 /**
  * Service for managing npm links between internal package dependencies
