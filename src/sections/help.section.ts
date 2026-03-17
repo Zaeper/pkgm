@@ -60,6 +60,13 @@ export class HelpSection implements ISection<void> {
         printCommand(ECommand.LIST, ECommandDescriptions.LIST);
         printCommand(ECommand.LIST_DEPENDENCIES, ECommandDescriptions.LIST_DEPENDENCIES);
         printCommand(ECommand.LIST_SCRIPTS, ECommandDescriptions.LIST_SCRIPTS);
+        printCommand(ECommand.AFFECTED, ECommandDescriptions.AFFECTED, undefined, {
+            "pkgm affected --changed-path=libs/core-lib": "Find all publishable packages affected by changes in core-lib.",
+            "pkgm affected --changed-path=libs/core-lib --scan": "Same as above but scans the filesystem instead of using pkgm.json."
+        }, {
+            '--changed-path': "Path of a changed package or library. Can be used multiple times.",
+            '--scan': "Scan the filesystem for packages instead of using pkgm.json. Produces clean machine-readable JSON output without banners."
+        });
         printCommand(ECommand.LINK, ECommandDescriptions.LINK);
         printCommand(ECommand.UNLINK, ECommandDescriptions.UNLINK);
         printCommand(ECommand.RUN, ECommandDescriptions.RUN, {
