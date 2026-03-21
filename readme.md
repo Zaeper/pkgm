@@ -1,7 +1,7 @@
 <div align="center">
   <a href="https://zaeper.com">
     <picture>
-      <img alt="Zaeper logo" src="https://zaeper-public-storage.fra1.cdn.digitaloceanspaces.com/zaeper_full_vertical-logo.svg" height="192">
+      <img alt="Zaeper logo" src="https://cdn1.zaeper.com/pkgm/zaeper_full_vertical-logo.svg" height="192">
     </picture>
   </a>
   <h1>PKGM - Package Management</h1>
@@ -106,7 +106,7 @@ interface.
 pkgm
 ```
 
-![pkgm command example](https://zaeper-public-storage.fra1.cdn.digitaloceanspaces.com/pkgm-interactive-example.gif)
+![pkgm command example](https://cdn1.zaeper.com/pkgm/pkgm-interactive-example.gif)
 
 #### Command-Line Mode
 
@@ -221,7 +221,7 @@ Since build watchers run asynchronously, there’s a chance that one project mig
 
 Since PKGM cannot automatically detect when a build process has completed, you’ll need to manually wait for the previous build to finish before initiating the next one.
 
-![PKGM build watch example](https://zaeper-public-storage.fra1.cdn.digitaloceanspaces.com/pkgm-build-watch-example.gif)
+![PKGM build watch example](https://cdn1.zaeper.com/pkgm/pkgm-build-watch-example.gif)
 
 ## Roadmap
 
