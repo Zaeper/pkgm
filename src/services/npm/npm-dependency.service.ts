@@ -7,7 +7,7 @@
 import Logger from "@ptkdev/logger";
 import chalk from "chalk";
 import path from "path";
-import {INpmDependencyService} from "./i-npm-dependency.service";
+import {IDependencyEntryJson, INpmDependencyService, IPackageDependencyJson} from "./i-npm-dependency.service";
 import {INpmProject} from "../../definitions/npm/i-npm-project";
 import {INpmWorkspace} from "../../definitions/npm/i-npm-workspace";
 import {INpmPackage} from "../../definitions/npm/i-npm-package";
@@ -405,5 +405,84 @@ export class NpmDependencyService implements INpmDependencyService {
         }
 
         return affectedPublishable;
+    }
+
+    /**
+     * Returns internal dependencies as a JSON-serializable array, sorted in
+     * processing order.
+     */
+    public getInternalDependenciesJson(
+        npmPackageCollection: NpmPackageCollection,
+        unscopedNpmPackageCollection: NpmPackageCollection,
+        rootDir: string
+    ): IPackageDependencyJson[] {
+        const sortedPackages: INpmPackage[] = this.getSortedNpmPackagesByInternalDependencies(npmPackageCollection, unscopedNpmPackageCollection);
+        const packagesLookupMap: Record<string, INpmPackage> = unscopedNpmPackageCollection.packagesLookupMap;
+
+        return sortedPackages.map((pkg: INpmPackage): IPackageDependencyJson => {
+            const relativePath: string = pkg.path.startsWith(rootDir)
+                ? pkg.path.substring(rootDir.length + 1)
+                : pkg.path;
+
+            const packageDependencies: Record<string, string> = this.getSummarizedNpmPackageInternalDependencies(pkg, unscopedNpmPackageCollection);
+            const peerDeps: Record<string, string> = pkg.packageJson.peerDependencies ?? {};
+            const devDeps: Record<string, string> = pkg.packageJson.devDependencies ?? {};
+
+            const dependencies: IDependencyEntryJson[] = Object.entries(packageDependencies).map(
+                ([depName, depVersion]: [string, string]): IDependencyEntryJson => {
+                    const depPackage: INpmPackage | undefined = packagesLookupMap[depName];
+                    const hasValidVersion: boolean = semver.valid(depVersion) !== null;
+
+                    return {
+                        name: depName,
+                        version: depVersion,
+                        isPeerDependency: Object.keys(peerDeps).includes(depName),
+                        isDevDependency: Object.keys(devDeps).includes(depName),
+                        isLinked: !hasValidVersion,
+                        isPrivate: !!depPackage?.packageJson.private
+                    };
+                }
+            );
+
+            return {
+                name: pkg.packageJson.name,
+                path: relativePath,
+                dependencies
+            };
+        });
+    }
+
+    /**
+     * Returns the transitive closure of internal dependencies for a given
+     * package, filtered from the topologically sorted list.
+     */
+    public getTransitiveDependencies(
+        packageName: string,
+        npmPackageCollection: NpmPackageCollection,
+        unscopedNpmPackageCollection: NpmPackageCollection
+    ): INpmPackage[] {
+        const sortedPackages: INpmPackage[] = this.getSortedNpmPackagesByInternalDependencies(npmPackageCollection, unscopedNpmPackageCollection);
+
+        // BFS to find all transitive dependencies
+        const transitive: Set<string> = new Set();
+        const queue: string[] = [packageName];
+
+        while (queue.length > 0) {
+            const current: string = queue.shift()!;
+            if (transitive.has(current)) continue;
+            transitive.add(current);
+
+            const pkg: INpmPackage | undefined = unscopedNpmPackageCollection.packagesLookupMap[current];
+            if (!pkg) continue;
+
+            const deps: Record<string, string> = this.getSummarizedNpmPackageInternalDependencies(pkg, unscopedNpmPackageCollection);
+            for (const depName of Object.keys(deps)) {
+                if (!transitive.has(depName)) {
+                    queue.push(depName);
+                }
+            }
+        }
+
+        return sortedPackages.filter((pkg: INpmPackage) => transitive.has(pkg.packageJson.name));
     }
 }

@@ -1,6 +1,6 @@
 export enum ECommandDescriptions {
     LIST = 'List all configured projects.',
-    LIST_DEPENDENCIES = 'List all configured projects along with their dependencies. Projects will be ordered in processing order.',
+    LIST_DEPENDENCIES = 'List all configured projects along with their dependencies. Projects will be ordered in processing order. Supports --json for machine-readable output and --project to filter by a specific project.',
     LIST_SCRIPTS = 'List all configured projects along with their scripts.',
     AFFECTED = 'Find publishable projects affected by changes in the given paths. Outputs JSON for CI integration.',
     LINK = 'Create symlinks of the projects and replaces the projects dependency with the file protocol.',

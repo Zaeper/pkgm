@@ -124,7 +124,7 @@ pkgm listScripts --scope-path=libs/
 | Command            | Required Arguments                                       | Optional Arguments                           | Description                                                                                                                                                                                                                                                                                                                                                                 |
 |--------------------|----------------------------------------------------------|----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `list`             |                                                          |                                              | List all configured projects.                                                                                                                                                                                                                                                                                                                                               |
-| `listDependencies` |                                                          |                                              | Lists all configured projects along with their dependencies in processing order.                                                                                                                                                                                                                                                                                            |
+| `listDependencies` |                                                          | --json<br />--project                        | Lists all configured projects along with their dependencies in processing order. Use `--json` for machine-readable JSON output (suppresses banners). Use `--project` to show only a specific project and its transitive dependencies. In interactive mode you can select a project from a prompt.                                                                           |
 | `listScripts`      |                                                          |                                              | List all configured projects along with their scripts.                                                                                                                                                                                                                                                                                                                      |
 | `affected`         |                                                          | --changed-path<br />--scan                   | Find publishable projects affected by changes in the given paths. Outputs JSON for CI integration. Use `--changed-path` to specify one or more changed paths. Use `--scan` to scan the filesystem for packages instead of using `pkgm.json` and produce clean machine-readable JSON output without banners.                                                                 |
 | `link`             |                                                          |                                              | Create symlinks of the projects and replaces the projects dependency with the file protocol.                                                                                                                                                                                                                                                                                |
@@ -137,6 +137,53 @@ pkgm listScripts --scope-path=libs/
 | `buildWatch`       |                                                          |                                              | Run npm run build:watch over your projects                                                                                                                                                                                                                                                                                                                                  |
 | `reinit`           |                                                          | --delete-package-lock                        | Re-initialize your projects. This includes deleting the according node_modules, .dist directory and refreshing of the existing symlinks                                                                                                                                                                                                                                     |
 | `help`             |                                                          |                                              | Displays a list of available commands and their descriptions.                                                                                                                                                                                                                                                                                                               |
+
+### Listing Dependencies
+
+List all project dependencies in processing order:
+```bash
+pkgm listDependencies
+```
+
+List only a specific project and its transitive dependencies:
+```bash
+pkgm listDependencies --project=@zaeper/core-lib
+```
+
+Machine-readable JSON output (for CI or tool integration):
+```bash
+pkgm listDependencies --json
+```
+
+Combine both flags to get JSON for a single project's dependency tree:
+```bash
+pkgm listDependencies --json --project=@zaeper/core-lib
+```
+
+The JSON output format:
+```json
+[
+  {
+    "name": "@zaeper/base-lib",
+    "path": "libs/base-lib",
+    "dependencies": []
+  },
+  {
+    "name": "@zaeper/core-lib",
+    "path": "libs/core-lib",
+    "dependencies": [
+      {
+        "name": "@zaeper/base-lib",
+        "version": "file:../../base-lib",
+        "isPeerDependency": false,
+        "isDevDependency": false,
+        "isLinked": true,
+        "isPrivate": true
+      }
+    ]
+  }
+]
+```
 
 ### Global Parameters
 
