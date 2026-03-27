@@ -114,4 +114,46 @@ export interface INpmDependencyService {
         npmPackageCollection: NpmPackageCollection,
         rootDir: string
     ): INpmPackage[];
+
+    /**
+     * Returns internal dependencies as a JSON-serializable array, sorted in
+     * processing order. Each entry includes the package name, path, and its
+     * internal dependencies with version, type, and status information.
+     * @param npmPackageCollection Collection of scoped npm packages
+     * @param unscopedNpmPackageCollection Collection of all npm packages
+     * @param rootDir Root directory for computing relative paths
+     */
+    getInternalDependenciesJson(
+        npmPackageCollection: NpmPackageCollection,
+        unscopedNpmPackageCollection: NpmPackageCollection,
+        rootDir: string
+    ): IPackageDependencyJson[];
+
+    /**
+     * Returns the transitive closure of internal dependencies for a given
+     * package, filtered from the topologically sorted list.
+     * @param packageName The target package name
+     * @param npmPackageCollection Collection of scoped npm packages
+     * @param unscopedNpmPackageCollection Collection of all npm packages
+     */
+    getTransitiveDependencies(
+        packageName: string,
+        npmPackageCollection: NpmPackageCollection,
+        unscopedNpmPackageCollection: NpmPackageCollection
+    ): INpmPackage[];
+}
+
+export interface IDependencyEntryJson {
+    name: string;
+    version: string;
+    isPeerDependency: boolean;
+    isDevDependency: boolean;
+    isLinked: boolean;
+    isPrivate: boolean;
+}
+
+export interface IPackageDependencyJson {
+    name: string;
+    path: string;
+    dependencies: IDependencyEntryJson[];
 }

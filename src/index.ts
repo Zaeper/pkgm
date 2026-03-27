@@ -31,6 +31,7 @@ import { IVersionManagerService } from "./services/i-version-manager.service";
 import { VersionManagerService } from "./services/version-manager.service";
 import { INpmProjectService } from "./services/npm/i-npm-project.service";
 import { INpmWorkspaceService } from "./services/npm/i-npm-workspace.service";
+import { INpmWorkspace } from "./definitions/npm/i-npm-workspace";
 import { NpmWorkspaceService } from "./services/npm/npm-workspace.service";
 import { INpmDependencyService } from "./services/npm/i-npm-dependency.service";
 import { INpmPackageScopes } from "./definitions/npm/i-npm-package-scopes";
@@ -119,10 +120,16 @@ async function defineArgs(command: string | undefined) {
                 '--scan': Boolean
             } );
             break;
+        case(ECommand.LIST_DEPENDENCIES.toLowerCase()):
+            args = arg( {
+                ...DEFAULT_ARGS,
+                '--json': Boolean,
+                '--project': String
+            } );
+            break;
         case(ECommand.EXIT.toLowerCase()):
         case(ECommand.HELP.toLowerCase()):
         case(ECommand.LIST.toLowerCase()):
-        case(ECommand.LIST_DEPENDENCIES.toLowerCase()):
         case(ECommand.LIST_SCRIPTS.toLowerCase()):
         case(ECommand.UNLINK.toLowerCase()):
         case(ECommand.RUN.toLowerCase()):
@@ -175,9 +182,22 @@ const listTargets = async (npmPackageCollection: NpmPackageCollection) => {
 
 const listTargetsWithDependencies = async (
     npmPackageCollection: NpmPackageCollection,
-    unscopedNpmPackageCollection: NpmPackageCollection
+    unscopedNpmPackageCollection: NpmPackageCollection,
+    projectFilter?: string
 ) => {
-    npmDependencyService.listInternalDependencies( npmPackageCollection, unscopedNpmPackageCollection );
+    let filteredCollection: NpmPackageCollection = npmPackageCollection;
+
+    if ( projectFilter ) {
+        const transitivePackages: INpmPackage[] = npmDependencyService.getTransitiveDependencies(
+            projectFilter, npmPackageCollection, unscopedNpmPackageCollection
+        );
+        filteredCollection = new NpmPackageCollection(
+            <INpmProject[]>transitivePackages.filter( ( p: INpmPackage ) => p.type === ENpmPackageType.PROJECT ),
+            <INpmWorkspace[]>transitivePackages.filter( ( p: INpmPackage ) => p.type === ENpmPackageType.WORKSPACE )
+        );
+    }
+
+    npmDependencyService.listInternalDependencies( filteredCollection, unscopedNpmPackageCollection );
 };
 
 const listTargetsWithScripts = async (npmPackageCollection: NpmPackageCollection) => {
@@ -326,16 +346,80 @@ async function executeTask(
             };
             await commandRunner.run( configFile, async (npmPackageCollection: NpmPackageCollection) => await listTargets( npmPackageCollection ), mode, EIncludeMode.ALL, true, false, commandRunnerOptions, npmPackageScopes );
             break;
-        case(ECommand.LIST_DEPENDENCIES.toLowerCase()):
-            commandRunnerOptions = {
-                command: ECommand.LIST_DEPENDENCIES
-            };
+        case(ECommand.LIST_DEPENDENCIES.toLowerCase()): {
+            const jsonOutput: boolean = args['--json'] === true;
+            let projectFilter: string | undefined = args['--project'];
 
-            await commandRunner.run( configFile, async (
-                npmPackageCollection: NpmPackageCollection,
-                unscopedNpmPackageCollection: NpmPackageCollection
-            ) => await listTargetsWithDependencies( npmPackageCollection, unscopedNpmPackageCollection ), mode, EIncludeMode.ALL, true, false, commandRunnerOptions, npmPackageScopes );
+            if ( mode === EMode.INTERACTIVE ) {
+                console.clear();
+                await LoggerUtil.printWelcome();
+
+                const filterChoice: string = await select( {
+                    message: 'Do you want to filter by a specific project?',
+                    choices: [
+                        {
+                            name: `No ${ chalk.gray( "Show all dependencies" ) }`,
+                            value: "all"
+                        }, {
+                            name: `Yes ${ chalk.gray( "Enter a project name" ) }`,
+                            value: "filter"
+                        }
+                    ],
+                    loop: false,
+                    default: "all"
+                } );
+
+                if ( filterChoice === "filter" ) {
+                    projectFilter = await input( {
+                        message: 'Enter the project name (e.g. @zaeper/core-lib)'
+                    } );
+                    if ( projectFilter.trim() === '' ) {
+                        projectFilter = undefined;
+                    }
+                }
+            }
+
+            if ( jsonOutput && mode === EMode.COMMAND ) {
+                // Bypass command runner for clean JSON output
+                const npmProjects: INpmProject[] = await npmProjectService.getPackages(
+                    configFile.projects, npmPackageScopes );
+                const npmWorkspaces: INpmWorkspace[] = await npmWorkspaceService.getPackages(
+                    configFile.workspaces ?? [], npmPackageScopes );
+                const npmPackageCollection: NpmPackageCollection = new NpmPackageCollection( npmProjects, npmWorkspaces );
+
+                const unscopedProjects: INpmProject[] = await npmProjectService.getPackages( configFile.projects );
+                const unscopedWorkspaces: INpmWorkspace[] = await npmWorkspaceService.getPackages( configFile.workspaces ?? [] );
+                const unscopedCollection: NpmPackageCollection = new NpmPackageCollection( unscopedProjects, unscopedWorkspaces );
+
+                let targetCollection: NpmPackageCollection = npmPackageCollection;
+
+                if ( projectFilter ) {
+                    const transitivePackages: INpmPackage[] = npmDependencyService.getTransitiveDependencies(
+                        projectFilter, npmPackageCollection, unscopedCollection
+                    );
+                    targetCollection = new NpmPackageCollection(
+                        <INpmProject[]>transitivePackages.filter( ( p: INpmPackage ) => p.type === ENpmPackageType.PROJECT ),
+                        <INpmWorkspace[]>transitivePackages.filter( ( p: INpmPackage ) => p.type === ENpmPackageType.WORKSPACE )
+                    );
+                }
+
+                const result = npmDependencyService.getInternalDependenciesJson(
+                    targetCollection, unscopedCollection, rootDir
+                );
+                console.log( JSON.stringify( result ) );
+            } else {
+                commandRunnerOptions = {
+                    command: ECommand.LIST_DEPENDENCIES,
+                    parameters: projectFilter ? { '--project': projectFilter } : undefined
+                };
+
+                await commandRunner.run( configFile, async (
+                    npmPackageCollection: NpmPackageCollection,
+                    unscopedNpmPackageCollection: NpmPackageCollection
+                ) => await listTargetsWithDependencies( npmPackageCollection, unscopedNpmPackageCollection, projectFilter ), mode, EIncludeMode.ALL, true, false, commandRunnerOptions, npmPackageScopes );
+            }
             break;
+        }
         case(ECommand.AFFECTED.toLowerCase()): {
             let changedPaths: string[];
             const scanMode: boolean = args['--scan'] === true;
@@ -844,10 +928,12 @@ function showHelp(): void {
 
 async function main(): Promise<void> {
     const command: string = process.argv[2];
-    const isQuietCommand: boolean = command?.toLowerCase() === ECommand.AFFECTED.toLowerCase()
-        && process.argv.includes( '--scan' );
+    const isQuietCommand: boolean = (command?.toLowerCase() === ECommand.AFFECTED.toLowerCase()
+        && process.argv.includes( '--scan' ))
+        || (command?.toLowerCase() === ECommand.LIST_DEPENDENCIES.toLowerCase()
+        && process.argv.includes( '--json' ));
 
-    if ( !isQuietCommand ) {
+    if ( !isQuietCommand && process.stdout.isTTY ) {
         console.clear();
         await LoggerUtil.printWelcome();
     }
@@ -862,7 +948,7 @@ async function main(): Promise<void> {
 }
 
 main().then( () => {
-    if ( !process.argv.includes( '--scan' ) ) {
+    if ( !process.argv.includes( '--scan' ) && !process.argv.includes( '--json' ) ) {
         LoggerUtil.printInfo( "Exiting..." );
     }
 } );

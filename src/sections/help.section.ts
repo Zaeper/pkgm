@@ -58,7 +58,14 @@ export class HelpSection implements ISection<void> {
         LoggerUtil.printSpacing()
         LoggerUtil.printIndented("Command:", 0)
         printCommand(ECommand.LIST, ECommandDescriptions.LIST);
-        printCommand(ECommand.LIST_DEPENDENCIES, ECommandDescriptions.LIST_DEPENDENCIES);
+        printCommand(ECommand.LIST_DEPENDENCIES, ECommandDescriptions.LIST_DEPENDENCIES, undefined, {
+            "pkgm listDependencies --project=@zaeper/core-lib": "List only the dependencies of @zaeper/core-lib in processing order.",
+            "pkgm listDependencies --json": "Output all dependencies as machine-readable JSON.",
+            "pkgm listDependencies --json --project=@zaeper/core-lib": "Output only @zaeper/core-lib dependencies as JSON."
+        }, {
+            '--json': "Output dependencies as machine-readable JSON. Suppresses banners and colors for clean parsing.",
+            '--project': "Filter output to show only the specified project and its transitive dependencies in processing order."
+        });
         printCommand(ECommand.LIST_SCRIPTS, ECommandDescriptions.LIST_SCRIPTS);
         printCommand(ECommand.AFFECTED, ECommandDescriptions.AFFECTED, undefined, {
             "pkgm affected --changed-path=libs/core-lib": "Find all publishable packages affected by changes in core-lib.",

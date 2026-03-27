@@ -59,12 +59,14 @@ export class LoggerUtil {
     }
 
     public static clearBottomLine(offset: number = 0) {
+        if (!process.stdout.isTTY) return;
         const targetLine = process.stdout.rows - 1 - offset;
         readline.cursorTo(process.stdout, 0, targetLine);
         readline.clearLine(process.stdout, 0);
     }
 
     public static printDemandActionMessage(message: string) {
+        if (!process.stdout.isTTY) return;
         LoggerUtil.clearBottomLine();
         readline.cursorTo(process.stdout, 0, process.stdout.rows - 1);
         readline.clearLine(process.stdout, 0);

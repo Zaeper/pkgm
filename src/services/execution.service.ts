@@ -114,33 +114,47 @@ export class ExecutionService implements IExecutionService {
         }
 
         if (async) {
-            console.clear();
-            const executionDeferred: IDeferred = this._createDeferred();
-
-            for (let i = 0; i < this._processQueue.length; i++) {
-                this._processIndex = i;
-                const processQueueElement = this._processQueue[i];
-
-                if (this._processQueue.length > i + 1) {
-                    this._keyPromptMessage = `${chalk.bgGreen.black(`  Press ${chalk.bold.black("<ENTER>")} to start the next process `)}${chalk.bgWhite.black.bold(` ${this._projectList[this._processIndex]}  `)}`;
-                } else {
-                    this._keyPromptMessage = `${chalk.bgRed.white(`  Press ${chalk.bold.white("<ENTER>")} to exit running processes  `)}`
-                }
-
-                this._runningProcesses.push(processQueueElement());
-
-                await KeyPromptUtil.setKeyPrompt(() => {
-                    LoggerUtil.clearBottomLine()
-
-                    if (this._processQueue.length === i + 1) {
-                        this._quitRunningProcesses();
-                        executionDeferred.resolve?.(undefined);
-                    }
-                    return;
-                }, "return");
+            if (process.stdout.isTTY) {
+                console.clear();
             }
 
-            await Promise.all([executionDeferred.promise])
+            if (!process.stdout.isTTY) {
+                // Non-TTY: start all processes concurrently, no key prompts
+                for (const processQueueElement of this._processQueue) {
+                    this._runningProcesses.push(processQueueElement());
+                }
+                // Wait for all processes to exit
+                await Promise.all(this._runningProcesses.map(p =>
+                    new Promise<void>(resolve => p.on('close', () => resolve()))
+                ));
+            } else {
+                const executionDeferred: IDeferred = this._createDeferred();
+
+                for (let i = 0; i < this._processQueue.length; i++) {
+                    this._processIndex = i;
+                    const processQueueElement = this._processQueue[i];
+
+                    if (this._processQueue.length > i + 1) {
+                        this._keyPromptMessage = `${chalk.bgGreen.black(`  Press ${chalk.bold.black("<ENTER>")} to start the next process `)}${chalk.bgWhite.black.bold(` ${this._projectList[this._processIndex]}  `)}`;
+                    } else {
+                        this._keyPromptMessage = `${chalk.bgRed.white(`  Press ${chalk.bold.white("<ENTER>")} to exit running processes  `)}`
+                    }
+
+                    this._runningProcesses.push(processQueueElement());
+
+                    await KeyPromptUtil.setKeyPrompt(() => {
+                        LoggerUtil.clearBottomLine()
+
+                        if (this._processQueue.length === i + 1) {
+                            this._quitRunningProcesses();
+                            executionDeferred.resolve?.(undefined);
+                        }
+                        return;
+                    }, "return");
+                }
+
+                await Promise.all([executionDeferred.promise])
+            }
         }
     }
 
@@ -174,11 +188,13 @@ export class ExecutionService implements IExecutionService {
     }
 
     private _print(emitter: string, text: string) {
-        if (this._keyPromptMessage) {
-            LoggerUtil.clearBottomLine()
-        }
+        if (process.stdout.isTTY) {
+            if (this._keyPromptMessage) {
+                LoggerUtil.clearBottomLine()
+            }
 
-        readline.cursorTo(process.stdout, 0, this._printedLines);
+            readline.cursorTo(process.stdout, 0, this._printedLines);
+        }
 
         if (this._lastEmitter !== emitter) {
             console.log(emitter)
@@ -188,7 +204,7 @@ export class ExecutionService implements IExecutionService {
         console.log(text);
         this._printedLines += text.toString().split('\n').length;
 
-        if (this._keyPromptMessage) {
+        if (process.stdout.isTTY && this._keyPromptMessage) {
             LoggerUtil.printDemandActionMessage(this._keyPromptMessage)
         }
     }

@@ -129,6 +129,8 @@ export class CommandRunner implements IRunner<CommandCallback, void, ICommandRun
         }
     }
 
+    private _hasPrintedOnce = false;
+
     private async _printCommandInfo(
         runnerOptions: ICommandRunnerOptions,
         prunedNpmPackageScopes: INpmPackageScopes | undefined,
@@ -137,8 +139,13 @@ export class CommandRunner implements IRunner<CommandCallback, void, ICommandRun
         silent: boolean,
         printTargetPackages: boolean
     ): Promise<void> {
-        console.clear();
-        await LoggerUtil.printWelcome();
+        if (process.stdout.isTTY) {
+            console.clear();
+            await LoggerUtil.printWelcome();
+        } else if (!this._hasPrintedOnce) {
+            await LoggerUtil.printWelcome();
+            this._hasPrintedOnce = true;
+        }
 
         const command: string | undefined = this._assembleCommand( runnerOptions, prunedNpmPackageScopes );
 
